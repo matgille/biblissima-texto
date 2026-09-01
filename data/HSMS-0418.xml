@@ -6,7 +6,12 @@
     <teiHeader>
         <fileDesc>
             <titleStmt>
-                <title>Farsa del mundo y moral</title>
+                <title>Farsa del mundo y moral: version XML-TEI</title>
+                <respStmt>
+                    <resp>Transcrit par</resp>
+                    <name><forename>Julio</forename>
+                        <surname>F Hernando</surname></name>
+                </respStmt>
                 <respStmt>
                     <resp>Textes édités et rassemblés par</resp>
                     <name><forename>Francisco</forename><surname>Gago
@@ -21,26 +26,57 @@
                 </respStmt>
             </titleStmt>
             <publicationStmt>
-                <p>Test</p>
+                <publisher>Publié dans le cadre de Biblissima-textes à partir de
+                    matériaux publiés auparavant.</publisher>
+                <availability status="restricted">
+                    <licence
+                        target="http://creativecommons.org/licenses/by-nc-sa/4.0/"
+                        >Creative Commons Attribution Non Commercial Share Alike
+                        4.0 International</licence>
+                </availability>
             </publicationStmt>
             <sourceDesc>
-                <!--Option 1, adaptée aux livres complets, imprimés-->
-                <biblStruct>
-                    <monogr>
-                        <author><forename>Hernán</forename>
-                            <surname>López de Yanguas</surname></author>
-                        <title>Farsa del mundo y moral</title>
-                        <imprint>
-                            <pubPlace cert="low">Burgos</pubPlace>
-                            <publisher cert="low"><forename>Juan</forename>
-                                <surname>de Junta</surname></publisher>
-                            <date>1528</date>
-                        </imprint>
-                    </monogr>
-                </biblStruct>
-                <!--Option 1, adaptée aux livres complets, imprimés-->
+                <!--Description de l'origine des transcriptions-->
+                <biblFull>
+                    <fileDesc>
+                        <titleStmt>
+                            <title>TEXT.YM8.txt, semi-paleographic
+                                transcription</title>
+                            <editor><forename>Francisco</forename><surname>Gago
+                                    Jover</surname> et
+                                    <forename>Javier</forename>
+                                <surname>Pueyo Mena</surname></editor>
+                        </titleStmt>
+                        <publicationStmt>
+                            <publisher>Hispanic Seminary of Medieval
+                                Studies</publisher>
+                            <date when="2026-03-07"/>
+                            <availability status="restricted">
+                                <licence
+                                    target="http://creativecommons.org/licenses/by-nc-sa/4.0/"
+                                    >Creative Commons Attribution Non Commercial
+                                    Share Alike 4.0 International</licence>
+                            </availability>
+                        </publicationStmt>
+                        <sourceDesc>
+                            <p>Projet OSTA (Old Spanish Textual Archive). Source
+                                des données: <ptr
+                                    target="https://github.com/hispanicseminary/OSTA"
+                                /></p>
+                        </sourceDesc>
+                    </fileDesc>
+                    <profileDesc>
+                        <langUsage>
+                            <language ident="es">Spanish</language>
+                        </langUsage>
+                    </profileDesc>
+                </biblFull>
+                <!--Description de l'origine des transcriptions-->
 
-                <!--Option 2, adaptée aux manuscrits et recueils organisés-->
+
+                <!--Description de la source primaire-->
+
+                <!--Option 2, adaptée aux manuscrits et recueils organisés, au prix d'un peu de contorsion-->
                 <msDesc>
                     <!--item-->
                     <msIdentifier>
@@ -51,12 +87,9 @@
                         <idno type="biblissima"
                             ><!--Identifiant biblissima de l'exemplaire manuscrit--></idno>
                         <idno type="philobiblon-manid"
-                            ><!--Identifiant philobiblon (actuel)  de l'exemplaire manuscrit--></idno>
+                            ><!--Identifiant philobiblon (actuel)  de l'exemplaire *manuscrit*--></idno>
                         <idno type="philobiblon-copid"
-                            ><!--Identifiant philobiblon (actuel)  de l'exemplaire imprimé--></idno>
-                        <idno type="philobiblon-cnum"
-                            ><!--identifiant de contrôle
-                                philobiblon du témoin (witness): "Una copia específica de esta obra (texid) dentro de una fuente primaria (manid)"--></idno>
+                            ><!--Identifiant philobiblon (actuel)  de l'exemplaire *imprimé*--></idno>
                         <msName>Farsa del mundo y moral del auctor dela Real:
                             que es ferna[n] lopez de yanguas. La qual declara
                             como el mu[n]do con sus cautelas engaña a cada vno
@@ -65,25 +98,53 @@
                     </msIdentifier>
                     <!--item-->
                     <history>
-                        <origin when="1528"/>
+                        <!--Le corresp permet de lier la date à l'unité codicologique -->
+                        <origin>
+                            <origDate when="1528" corresp="#unit-1"
+                                >1528</origDate>
+                        </origin>
+                        <!--Le corresp permet de lier la date à l'unité codicologique -->
                     </history>
                     <msContents>
-                        <msItem>
+                        <summary>Livre unitaire / recueil. Seule l'oeuvre
+                            indiquée en titre est décrite.</summary>
+                        <!--Fonctionne bien pour les recueils, un peu limite quand il s'agit d'oeuvres completes-->
+                        <msItem xml:id="unit-1">
                             <!--Où indiquer la date de l'oeuvre?-->
+                            <!--Il y a aussi une date de production de l'unité codicologique-->
                             <locus>ff. 1r-16v</locus>
-                            <author><forename>Hernán</forename>
-                                <surname>López de Yanguas</surname></author>
-                            <title>Farsa del mundo y moral</title>
-                            <idno type="OCLC">1050704794</idno>
-                            <idno type="HSMS-WORK">HSMS-0418-0001</idno>
-                            <idno type="philobiblon-texid"
-                                ><!--identifiant
+                            <idno type="philobiblon-cnum"
+                                ><!--identifiant de contrôle
+                                philobiblon du témoin (witness):
+                                "Una copia específica de esta obra (texid) dentro de una fuente primaria (manid)"--></idno>
+
+                            <!--Ici on décrit l'oeuvre (work) ou l'expression-->
+                            <bibl>
+                                <author><forename>Hernán</forename>
+                                    <surname>López de Yanguas</surname></author>
+                                <title>Farsa del mundo y moral</title>
+                                <date atMost="1524">1524 ad quem</date>
+                                <idno type="OCLC">1050704794</idno>
+                                <idno type="HSMS-WORK">HSMS-0418-0001</idno>
+                                <idno type="philobiblon-texid"
+                                    ><!--identifiant
                                 philobiblon de l'oeuvre (work)--></idno>
+                                <idno type="biblissima"
+                                    ><!--identifiant biblissima de l'oeuvre--></idno>
+                            </bibl>
+                            <!--Ici on décrit l'oeuvre (work)-->
                         </msItem>
                     </msContents>
                 </msDesc>
+                <!--Description de la source primaire-->
+
             </sourceDesc>
         </fileDesc>
+        <encodingDesc>
+            <editorialDecl>
+                <p>Règles de transcription et de normalisation</p>
+            </editorialDecl>
+        </encodingDesc>
     </teiHeader>
     <text>
         <body>
