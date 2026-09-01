@@ -1,0 +1,5 @@
+# https://stackoverflow.com/a/50156706 gérer pytest et src/
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
