@@ -1,6 +1,5 @@
 import re
 import src.transform.utils as utils
-from transformers import pipeline
 import numpy as np
 
 def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
@@ -82,22 +81,27 @@ def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
 	return result
 
 
-def retrieve_metadata(file) -> dict:
+def retrieve_metadata(as_list, name_parser) -> dict:
 	"""
 	Wrapper pour la récupération de metadonnées
-	:param file: le chemin vers le fichier
+	:param as_list: le chemin vers le fichier
 	:return: un dictionnaire contenant les metadonnées
 	"""
 	df_oeuvres = utils.import_table_as_dataframe(path="databases/tabla-obras.csv", sep="\t")
 	df_codex = utils.import_table_as_dataframe(path="databases/tabla-codices.csv", sep="\t")
-	as_list = utils.read_to_lines(file)
+	df_oeuvres = df_oeuvres.replace({float('nan'): None})
+	df_codex = df_codex.replace({float('nan'): None})
 	HSMS_ident = as_list[0].replace("{RMK: ", "").replace(".}", "")
 
 	oeuvre_filtree = df_oeuvres[df_oeuvres["HSMS ID"] == HSMS_ident]
 	codex_filtre = df_codex[df_codex["HSMS ID"] == HSMS_ident]
 
 	##### Identifiants
-	oeuvre_id = oeuvre_filtree["Obra ID"].values[0]
+	try:
+		oeuvre_id = oeuvre_filtree["Obra ID"].values[0]
+	except IndexError:
+		print("Erreur avec le fichier")
+		return
 	file_id_hsms = codex_filtre["Abreviatura HSMS"].values[0]
 	beta_copid = oeuvre_filtree["BETA copid"].values[0]
 	beta_manid = oeuvre_filtree["BETA manid"].values[0]
@@ -117,8 +121,6 @@ def retrieve_metadata(file) -> dict:
 	transcripteur = codex_filtre["transcriptor"].values[0]
 	traducteur = oeuvre_filtree["Traductor"].values[0]
 
-	name_parser = pipeline("ner", model="ele-sage/distilbert-base-uncased-name-splitter",
-						   aggregation_strategy="simple")
 	auteur_parse = retrieve_names(auteur, parser=name_parser, is_author=True)
 	transcripteur_parse = retrieve_names(transcripteur, parser=name_parser, is_author=False)
 	if isinstance(traducteur, str):
@@ -140,6 +142,16 @@ def retrieve_metadata(file) -> dict:
 
 
 	langues = oeuvre_filtree["lengua 1"].values[0], oeuvre_filtree["lengua 2"].values[0]
+	dict_langues = {"castellano": "castillan",
+				   "aragonés": "aragonais",
+				   "latín": "latin",
+				   "gallego": "galicien",
+				   "leonés": "léonais",
+				   "castellano occidental": "castillan occidental",
+				   "navarro": "navarrais",
+				   "navarro-aragonés": "navarrais-aragonais",
+				   "riojano": "riojan"}
+	langues = [dict_langues[langue] for langue in langues if langue]
 	type_textuel = oeuvre_filtree["tipo textual"].values[0]
 	matiere_1 = oeuvre_filtree["materia 1"].values[0]
 	matiere_2 = oeuvre_filtree["materia 2"].values[0]
@@ -148,6 +160,43 @@ def retrieve_metadata(file) -> dict:
 	notes_oeuvre_editeur = oeuvre_filtree["notas"].values[0]
 	notes_codex_editeur = codex_filtre["notas"].values[0]
 	version_OSTA = codex_filtre["versión"].values[0]
+
+
+	metadata_dict = {
+		"version_OSTA": version_OSTA,
+		"notes_codex_editeur": notes_codex_editeur,
+		"notes_oeuvre_editeur": notes_oeuvre_editeur,
+		"matiere_1": matiere_1,
+		"matiere_2": matiere_2,
+		"matiere_3": matiere_3,
+		"matiere_4": matiere_4,
+		"type_textuel": type_textuel,
+		"langues": langues,
+		"producteur": producteur,
+		"lieu_production": lieu_production,
+		"debut_production_codex": debut_production_codex,
+		"fin_production_codex": fin_production_codex,
+		"debut_production_oeuvre": debut_production_oeuvre,
+		"fin_production_oeuvre": fin_production_oeuvre,
+		"format": format,
+		"folio_codex": folio_codex,
+		"emplacement_oeuvre": emplacement_oeuvre,
+		"titre": titre,
+		"traducteur_parse": traducteur_parse,
+		"transcripteur_parse": transcripteur_parse,
+		"auteur_parse": auteur_parse,
+		"digitalisation": digitalisation,
+		"lien_philobiblon": lien_philobiblon,
+		"bibliotheque_conservation": bibliotheque_conservation,
+		"cote": cote,
+		"beta_cnum": beta_cnum,
+		"beta_manid": beta_manid,
+		"beta_copid": beta_copid,
+		"file_id_hsms": file_id_hsms,
+		"oeuvre_id": oeuvre_id,
+		"HSMS_ident": HSMS_ident
+	}
+	return metadata_dict
 
 
 if __name__ == '__main__':
