@@ -79,7 +79,8 @@
                 <!--Option 2, adaptée aux manuscrits et recueils organisés, au prix d'un peu de contorsion-->
                 <msDesc>
                     <!--item-->
-                    <msIdentifier>
+                    <msIdentifier
+                        facs="http://bdh.bne.es/bnesearch/detalle/bdh0000239665">
                         <settlement>Madrid</settlement>
                         <repository>Biblioteca Nacional de España</repository>
                         <idno type="BNE">R/11877</idno>
@@ -110,9 +111,12 @@
                             indiquée en titre est décrite.</summary>
                         <!--Fonctionne bien pour les recueils, un peu limite quand il s'agit d'oeuvres completes-->
                         <msItem xml:id="unit-1">
-                            <!--Où indiquer la date de l'oeuvre?-->
-                            <!--Il y a aussi une date de production de l'unité codicologique-->
+
+                            <!--On peut scrapper philobiblon pour récupérer la localisation-->
                             <locus>ff. 1r-16v</locus>
+                            <!--On peut scrapper philobiblon pour récupérer la localisation-->
+
+
                             <idno type="philobiblon-cnum"
                                 ><!--identifiant de contrôle
                                 philobiblon du témoin (witness):
@@ -142,8 +146,20 @@
         </fileDesc>
         <encodingDesc>
             <editorialDecl>
-                <p>Règles de transcription et de normalisation</p>
+                <p>Règles de transcription et de normalisation.</p>
+                <p>Règles de structuration</p>
             </editorialDecl>
+            <refsDecl>
+                <!--Doit être adapté à chaque structure de document-->
+                <citeStructure match="/text/body/pb" use="@n"/>
+                <citeStructure unit="book" match="/text/body/div" use="@n">
+                    <citeStructure unit="part" match="div" use="@n" delim=".">
+                        <citeStructure unit="chapter" match="div" use="@n"
+                            delim="."/>
+                    </citeStructure>
+                </citeStructure>
+                <!--Doit être adapté à chaque structure de document-->
+            </refsDecl>
         </encodingDesc>
     </teiHeader>
     <text>
