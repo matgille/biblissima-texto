@@ -8,7 +8,7 @@ def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
 	:param string: la chaîne à traiter
 	:return: une liste de dictionnaires
 	"""
-
+	return None
 	result = []
 	if is_author:
 		# Le cas des noms d'auteur
@@ -100,7 +100,7 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	try:
 		oeuvre_id = oeuvre_filtree["Obra ID"].values[0]
 	except IndexError:
-		print("Erreur avec le fichier")
+		print(f"Erreur avec le fichier {HSMS_ident}")
 		return
 	file_id_hsms = codex_filtre["Abreviatura HSMS"].values[0]
 	beta_copid = oeuvre_filtree["BETA copid"].values[0]
