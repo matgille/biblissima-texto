@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng" type="application/xml"
+	schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:lang="fr">
+    <teiHeader>
+        <fileDesc>
+            <titleStmt>
+                <title>Farsa del mundo y moral: version XML-TEI</title>
+                <respStmt>
+                    <resp>Transcrit par</resp>
+                    <name><forename>Julio F</forename>
+                        <surname>Hernando</surname></name>
+                </respStmt>
+                <respStmt>
+                    <resp>Textes édités et rassemblés par</resp>
+                    <name><forename>Francisco</forename><surname>Gago
+                            Jover</surname> et <forename>Javier</forename>
+                        <surname>Pueyo Mena</surname></name>
+                </respStmt>
+                <respStmt>
+                    <resp>Modélisation, encodage et structuration XML-TEI
+                        par</resp>
+                    <name><forename>Matthias</forename>
+                        <surname>Gille Levenson</surname></name>
+                </respStmt>
+            </titleStmt>
+            <publicationStmt>
+                <publisher>Publié dans le cadre de Biblissima-textes à partir de
+                    matériaux publiés auparavant.</publisher>
+                <availability status="restricted">
+                    <licence
+                        target="http://creativecommons.org/licenses/by-nc-sa/4.0/"
+                        >Creative Commons Attribution Non Commercial Share Alike
+                        4.0 International</licence>
+                </availability>
+            </publicationStmt>
+            <sourceDesc>
+                <!--Description de l'origine des transcriptions-->
+                <biblFull>
+                    <fileDesc>
+                        <titleStmt>
+                            <title>TEXT.YM8.txt, semi-paleographic
+                                transcription</title>
+                            <editor><forename>Francisco</forename><surname>Gago
+                                    Jover</surname> et
+                                    <forename>Javier</forename>
+                                <surname>Pueyo Mena</surname></editor>
+                        </titleStmt>
+                        <publicationStmt>
+                            <publisher>Hispanic Seminary of Medieval
+                                Studies</publisher>
+                            <date when="2026-03-07"/>
+                            <availability status="restricted">
+                                <licence
+                                    target="http://creativecommons.org/licenses/by-nc-sa/4.0/"
+                                    >Creative Commons Attribution Non Commercial
+                                    Share Alike 4.0 International</licence>
+                            </availability>
+                        </publicationStmt>
+                        <sourceDesc>
+                            <p>Projet OSTA (Old Spanish Textual Archive). Source
+                                des données: <ptr
+                                    target="https://github.com/hispanicseminary/OSTA"
+                                />, v2.0</p>
+                        </sourceDesc>
+                    </fileDesc>
+                    <profileDesc>
+                        <langUsage>
+                            <language ident="es">Spanish</language>
+                        </langUsage>
+                    </profileDesc>
+                </biblFull>
+                <!--Description de l'origine des transcriptions-->
+
+
+                <!--Description de la source primaire-->
+
+                <!--Option adaptée aux manuscrits et recueils organisés-->
+                <msDesc>
+                    <!--item-->
+                    <msIdentifier
+                        facs="http://bdh.bne.es/bnesearch/detalle/bdh0000239665">
+                        <settlement>Madrid</settlement>
+                        <repository>Biblioteca Nacional de España</repository>
+                        <idno type="BNE">R/11877</idno>
+                        <idno type="HSMS-ID">HSMS-0418</idno>
+                        <idno type="biblissima"
+                            ><!--Identifiant biblissima de l'exemplaire manuscrit--></idno>
+                        <idno type="philobiblon-manid"
+                            ><!--Identifiant philobiblon (actuel)  de l'exemplaire *manuscrit*--></idno>
+                        <idno type="philobiblon-copid"
+                            ><!--Identifiant philobiblon (actuel)  de l'exemplaire *imprimé*--></idno>
+                        <msName>Farsa del mundo y moral del auctor dela Real:
+                            que es ferna[n] lopez de yanguas. La qual declara
+                            como el mu[n]do con sus cautelas engaña a cada vno
+                            de nosotros. Y en fin relata la Assunpcion de
+                            n[uest]ra señora</msName>
+                    </msIdentifier>
+                    <!--item-->
+                    <history>
+                        <!--Le corresp permet de lier la date à l'unité codicologique, dans le cas de recueils organisés-->
+                        <origin>
+                            <origDate when="1528" corresp="#unit-1"
+                                >1528</origDate>
+                        </origin>
+                        <!--Le corresp permet de lier la date à l'unité codicologique -->
+                    </history>
+                    <msContents>
+                        <summary>Livre unitaire / recueil. Seule l'oeuvre
+                            indiquée en titre est décrite.</summary>
+                        <!--Fonctionne bien pour les recueils, un peu limite quand il s'agit d'oeuvres completes-->
+                        <msItem xml:id="unit-1">
+                            <locus>ff. 1r-16v</locus>
+                            <idno type="philobiblon-cnum"
+                                ><!--identifiant de contrôle
+                                philobiblon du témoin (witness):
+                                "Una copia específica de esta obra (texid) dentro de una fuente primaria (manid)"--></idno>
+                            <!--Ici on décrit l'oeuvre (work) ou l'expression en cas de traduction-->
+
+                            <!--Voir si on met pas quelque part une liste avec tous les identifiants-->
+                            <bibl ana="#work" corresp="#frbroo-work">
+                                <author><forename>Hernán</forename>
+                                    <surname>López de Yanguas</surname></author>
+                                <title>Farsa del mundo y moral</title>
+                                <date atMost="1524">1524 ad quem</date>
+                                <idno type="HSMS-WORK" subtype="a"
+                                    >HSMS-0418-0001</idno>
+                                <idno type="philobiblon-texid"
+                                    ><!--identifiant
+                                philobiblon de l'oeuvre (work)--></idno>
+                                <idno type="biblissima"
+                                    ><!--identifiant biblissima de l'oeuvre--></idno>
+                            </bibl>
+                            <!--Ici on décrit l'oeuvre (work)-->
+                        </msItem>
+                    </msContents>
+                </msDesc>
+                <!--Description de la source primaire-->
+
+            </sourceDesc>
+        </fileDesc>
+        <profileDesc>
+            <langUsage>
+                <language ident="es">castillan</language>
+            </langUsage>
+        </profileDesc>
+        <encodingDesc>
+            <editorialDecl>
+                <p>Règles de transcription et de normalisation.</p>
+                <p>Règles de structuration</p>
+            </editorialDecl>
+            <refsDecl>
+                <!--Doit être adapté à chaque structure de document-->
+                <citeStructure match="/text/body/pb" use="@n"/>
+                <citeStructure unit="book" match="/text/body/div" use="@n">
+                    <citeStructure unit="part" match="div" use="@n" delim=".">
+                        <citeStructure unit="chapter" match="div" use="@n"
+                            delim="."/>
+                    </citeStructure>
+                </citeStructure>
+                <!--Doit être adapté à chaque structure de document-->
+            </refsDecl>
+        </encodingDesc>
+    </teiHeader>
+    <text>
+        <body>
+            <p>Some text here.</p>
+        </body>
+    </text>
+</TEI>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<?xml-model href="http://www.tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng" type="application/xml"
+	schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+   <teiHeader>
+      <fileDesc>
+         <titleStmt>
+            <title>Farsa del mundo y moral</title>
+            <respStmt>
+               <resp>Textes édités et rassemblés par</resp>
+               <name><forename>Francisco</forename><surname>Gago Jover</surname>
+                  et <forename>Javier</forename>
+                  <surname>Pueyo Mena</surname></name>
+            </respStmt>
+            <respStmt>
+               <resp>Modélisation, encodage et structuration XML-TEI par</resp>
+               <name><forename>Matthias</forename>
+                  <surname>Gille Levenson</surname></name>
+            </respStmt>
+         </titleStmt>
+         <publicationStmt>
+            <p>Publié dans le cadre du projet Biblissima-textes.</p>
+         </publicationStmt>
+         <sourceDesc>
+            <!--Option 2, plutôt adaptée aux livres imprimés, moins précise-->
+            <biblFull>
+               <titleStmt>
+                  <title>Farsa del mundo y moral</title>
+                  <author><forename>Hernán</forename>
+                     <surname>López de Yanguas</surname></author>
+               </titleStmt>
+               <publicationStmt>
+                  <publisher cert="low"><forename>Juan</forename>
+                     <surname>de Junta</surname></publisher>
+                  <pubPlace cert="low">Burgos</pubPlace>
+                  <date type="expression" when="1528">1528</date>
+                  <date type="work" atMost="1524">1524</date>
+                  <idno type="HSMS-ID">HSMS-0418</idno>
+                  <idno type="HSMS-WORK">HSMS-0418-0001</idno>
+                  <idno type="OCLC">1050704794</idno>
+                  <idno type="biblissima"
+                     ><!--Identifiant biblissima de l'exemplaire manuscrit--></idno>
+                  <idno type="philobiblon-manid"
+                     ><!--Identifiant philobiblon (actuel)  de l'exemplaire *manuscrit*--></idno>
+                  <idno type="philobiblon-copid"
+                     ><!--Identifiant philobiblon (actuel)  de l'exemplaire *imprimé*--></idno>
+                  <idno type="philobiblon-texid"><!--identifiant
+                                philobiblon de l'oeuvre (work)--></idno>
+                  <idno type="biblissima"
+                     ><!--identifiant biblissima de l'oeuvre--></idno>
+               </publicationStmt>
+            </biblFull>
+            <!--Option 1, adaptée aux livres complets, imprimés-->
+         </sourceDesc>
+      </fileDesc>
+   </teiHeader>
+   <text>
+      <body>
+         <p>Some text here.</p>
+      </body>
+   </text>
+</TEI>
