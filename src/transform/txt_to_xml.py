@@ -147,7 +147,7 @@ def iterxml(text, id=""):
 				raw_tag = editorial_tag
 				# On enlève le '=' pour obtenir un nom XML classique
 				tag = raw_tag.replace('=', '_equal_')
-				if "IN" in tag:
+				if re.search(r"^IN", tag):
 					value = re.search(r"\d+", tag)
 					tag = "hi"
 					output.append(f'<hi rend="initiale" n="{value.group(0)}">')
