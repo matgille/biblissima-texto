@@ -25,7 +25,7 @@ def main(files:str) -> None:
 		orig_text = "\n".join(file_as_list[7:])
 		xml_text = conversion.convert(orig_text, id=md["file_id_hsms"])
 		print(md["file_id_hsms"])
-		conversion.convert_to_xml(xml_text, orig_text, md["file_id_hsms"])
+		conversion.convert_to_xml(xml_text, orig_text, md)
 
 
 if __name__ == '__main__':

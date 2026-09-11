@@ -1,6 +1,7 @@
 import re
 import src.transform.utils as utils
-import numpy as np
+import src.transform.get_texid as retrieveTexid
+import pandas as pd
 
 def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
 	"""
@@ -8,7 +9,6 @@ def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
 	:param string: la chaîne à traiter
 	:return: une liste de dictionnaires
 	"""
-	return None
 	result = []
 	if is_author:
 		# Le cas des noms d'auteur
@@ -93,6 +93,7 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	df_codex = df_codex.replace({float('nan'): None})
 	HSMS_ident = as_list[0].replace("{RMK: ", "").replace(".}", "")
 
+	df_oeuvres["BETA cnum"] =  pd.to_numeric(df_oeuvres["BETA cnum"]).astype('Int64')
 	oeuvre_filtree = df_oeuvres[df_oeuvres["HSMS ID"] == HSMS_ident]
 	codex_filtre = df_codex[df_codex["HSMS ID"] == HSMS_ident]
 
@@ -161,6 +162,10 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	notes_codex_editeur = codex_filtre["notas"].values[0]
 	version_OSTA = codex_filtre["versión"].values[0]
 
+	if lien_philobiblon != None and beta_cnum != None:
+		beta_texid = retrieveTexid.search_texid(lien_philobiblon, cnum=beta_cnum)
+	else:
+		beta_texid = "Unknown"
 
 	metadata_dict = {
 		"version_OSTA": version_OSTA,
@@ -187,6 +192,7 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 		"auteur_parse": auteur_parse,
 		"digitalisation": digitalisation,
 		"lien_philobiblon": lien_philobiblon,
+		"beta_texid": beta_texid,
 		"bibliotheque_conservation": bibliotheque_conservation,
 		"cote": cote,
 		"beta_cnum": beta_cnum,

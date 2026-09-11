@@ -19,13 +19,13 @@
     </xsl:template>
     <!--Permet de copie en appliquant le namespace local de la feuille (défault: tei)-->
 
-
+    <xsl:variable name="dir"
+        >/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data2</xsl:variable>
 
     <xsl:template match="/">
         <!--On crée un doc principal pour vérifier les validités-->
-        <xsl:result-document
-            href="/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data/main.xml">
-            <TEI xmlns="http://www.tei-c.org/ns/1.0">
+        <xsl:result-document href="{$dir}/main.xml" indent="true">
+            <TEI xmlns="http://www.tei-c.org/ns/1.0" xml:lang="es">
                 <teiHeader>
                     <fileDesc>
                         <titleStmt>
@@ -39,11 +39,10 @@
                         </sourceDesc>
                     </fileDesc>
                 </teiHeader>
-                <xsl:for-each
-                    select="collection('/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data/xml?*.xml')">
+                <xsl:for-each select="collection(concat($dir, '/xml?*.xml'))">
                     <xsl:variable name="outname">
                         <xsl:value-of
-                            select="concat('/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
+                            select="concat($dir, '/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
                         />
                     </xsl:variable>
                     <xsl:element name="xi:include"
@@ -55,34 +54,16 @@
 
         </xsl:result-document>
 
-        <xsl:for-each
-            select="collection('/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data2/xml?*.xml')">
+        <xsl:for-each select="collection(concat($dir, '/xml?*.xml'))">
 
             <xsl:variable name="outname">
                 <xsl:value-of
-                    select="concat('/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data2/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
+                    select="concat($dir, '/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
                 />
             </xsl:variable>
-            <xsl:result-document href="{$outname}">
-                <xsl:element name="TEI">
-                    <teiHeader>
-                        <fileDesc>
-                            <titleStmt>
-                                <title>Title</title>
-                            </titleStmt>
-                            <publicationStmt>
-                                <p>Publication Information</p>
-                            </publicationStmt>
-                            <sourceDesc>
-                                <p>Information about the source</p>
-                            </sourceDesc>
-                        </fileDesc>
-                    </teiHeader>
-                    <xsl:element name="text">
-                        <xsl:element name="body">
-                            <xsl:apply-templates/>
-                        </xsl:element>
-                    </xsl:element>
+            <xsl:result-document href="{$outname}" indent="true">
+                <xsl:element name="TEI" xmlns="http://www.tei-c.org/ns/1.0">
+                    <xsl:apply-templates select="TEI"/>
                 </xsl:element>
             </xsl:result-document>
         </xsl:for-each>
@@ -90,13 +71,39 @@
 
 
     <!--Illustrations, miniatures, rubriques-->
-    <xsl:template match="MIN">
+    <xsl:template match="MIN | MIN_equal_ | _equal_MIN | _equal_MIN_equal_">
         <xsl:element name="figure">
             <xsl:attribute name="type">
                 <xsl:text>miniature</xsl:text>
             </xsl:attribute>
             <xsl:if test="node()">
-                <xsl:element name="desc">
+                <xsl:element name="ab">
+                    <xsl:apply-templates/>
+                </xsl:element>
+            </xsl:if>
+        </xsl:element>
+    </xsl:template>
+
+    <xsl:template match="DIAG | DIAG_equal_ | _equal_DIAG | _equal_DIAG_equal_">
+        <xsl:element name="figure">
+            <xsl:attribute name="type">
+                <xsl:text>diagramme</xsl:text>
+            </xsl:attribute>
+            <xsl:if test="node()">
+                <xsl:element name="ab">
+                    <xsl:apply-templates/>
+                </xsl:element>
+            </xsl:if>
+        </xsl:element>
+    </xsl:template>
+
+    <xsl:template match="ILL">
+        <xsl:element name="figure">
+            <xsl:attribute name="type">
+                <xsl:text>illumination</xsl:text>
+            </xsl:attribute>
+            <xsl:if test="node()">
+                <xsl:element name="ab">
                     <xsl:apply-templates/>
                 </xsl:element>
             </xsl:if>
@@ -104,13 +111,36 @@
     </xsl:template>
 
 
-    <xsl:template match="ILL">
-        <xsl:element name="figure">
-            <xsl:attribute name="type">
-                <xsl:text>illumination</xsl:text>
-            </xsl:attribute>
-            <xsl:apply-templates/>
-        </xsl:element>
+    <xsl:template match="SYMB">
+        <xsl:choose>
+            <!--Cas particulier: {SYMB. {BLNK.}}, dans MAN, manuscrit pas accessible-->
+            <xsl:when test="BLNK">
+                <xsl:element name="space"/>
+            </xsl:when>
+            <!--Cas particulier: {SYMB. {BLNK.}}-->
+
+
+            <!--{SYMB. <word>} Logiquement, un symbole qui contient une expansion devrait être codé ex > g-->
+            <xsl:when test="ex">
+                <xsl:element name="choice">
+                    <xsl:element name="abbr">
+                        <xsl:element name="g"/>
+                    </xsl:element>
+                    <xsl:element name="expan">
+                        <xsl:element name="ex">
+                            <xsl:apply-templates select="ex/node()"/>
+                        </xsl:element>
+                    </xsl:element>
+                </xsl:element>
+            </xsl:when>
+            <!--Logiquement, un symbole qui contient une expansion devrait être codé ex > g-->
+
+            <xsl:otherwise>
+                <xsl:element name="g">
+                    <xsl:apply-templates/>
+                </xsl:element>
+            </xsl:otherwise>
+        </xsl:choose>
     </xsl:template>
 
 
@@ -134,6 +164,25 @@
             <xsl:apply-templates/>
         </xsl:element>
     </xsl:template>
+
+
+    <!--Cas des initiales qui contiennent une miniature-->
+    <xsl:template match="hi[@rend['initiale']][figure[@type = 'miniature']]">
+        <xsl:element name="hi">
+            <xsl:attribute name="rend">
+                <xsl:text>initiale</xsl:text>
+            </xsl:attribute>
+            <xsl:element name="figure">
+                <xsl:attribute name="type">
+                    <xsl:text>miniature</xsl:text>
+                </xsl:attribute>
+                <xsl:value-of select="."/>
+            </xsl:element>
+        </xsl:element>
+    </xsl:template>
+    <!--Cas des initiales qui contiennent une miniature-->
+
+
     <!--Illustrations, miniatures-->
 
 
@@ -141,8 +190,7 @@
 
     <!--    -->
     <xsl:template
-        match="node()[starts-with(local-name(), 'HD')][matches('HD\d+', local-name())]">
-        <xsl:message>FOUND YOU</xsl:message>
+        match="node()[starts-with(local-name(), 'HD')][matches(local-name(), 'HD\d+')]">
         <xsl:element name="fw">
             <xsl:attribute name="rend">titre-courant</xsl:attribute>
             <xsl:attribute name="n">
@@ -192,6 +240,26 @@
     </xsl:template>
     <!--Signatures, mots d'appel-->
 
+    <xsl:template match="SHIFTED">
+        <!-- <xsl:message>
+            <xsl:copy-of select="following-sibling::*[following-sibling::lb[1]]"
+            />
+        </xsl:message>-->
+        <!--Continuer ici-->
+    </xsl:template>
+
+    <!--Faire quelque chose de deu<ex>e<choice>
+                     <sic>r</sic>
+                     <corr/>
+                  </choice>
+               </ex> ou de 
+    
+    q<ex>u<choice>
+                     <sic>i</sic>
+                     <corr/>
+                  </choice>e</ex>ras
+    
+    -->
 
     <xsl:template match="RMK">
         <xsl:element name="note">
@@ -226,11 +294,44 @@
         <xsl:apply-templates/>
     </xsl:template>
 
+    <xsl:template match="CB5">
+        <xsl:element name="cb" namespace="http://www.tei-c.org/ns/1.0">
+            <xsl:attribute name="type">quintuple-column</xsl:attribute>
+        </xsl:element>
+        <xsl:apply-templates/>
+    </xsl:template>
+
+
+    <xsl:template match="CB6">
+        <xsl:element name="cb" namespace="http://www.tei-c.org/ns/1.0">
+            <xsl:attribute name="type">sextuple-column</xsl:attribute>
+        </xsl:element>
+        <xsl:apply-templates/>
+    </xsl:template>
+
+
+    <xsl:template match="CB7">
+        <xsl:element name="cb" namespace="http://www.tei-c.org/ns/1.0">
+            <xsl:attribute name="type">septimuple-column</xsl:attribute>
+        </xsl:element>
+        <xsl:apply-templates/>
+    </xsl:template>
+
     <!--Gloses et ajouts-->
     <xsl:template match="AD">
         <xsl:element name="seg">
             <xsl:attribute name="type">
                 <xsl:text>addendum</xsl:text>
+            </xsl:attribute>
+            <xsl:apply-templates/>
+        </xsl:element>
+    </xsl:template>
+
+
+    <xsl:template match="GL">
+        <xsl:element name="seg">
+            <xsl:attribute name="type">
+                <xsl:text>glose</xsl:text>
             </xsl:attribute>
             <xsl:apply-templates/>
         </xsl:element>
@@ -248,7 +349,7 @@
                 'HEB': 'heb',
                 'PRV': 'pro',
                 'PRT': 'por',
-                'LAM': 'languages_from_america',
+                'LAM': 'lfa',
                 'ITL': 'ita',
                 'GRK': 'gre',
                 'GER': 'ger',
@@ -259,14 +360,14 @@
                 'BAS': 'eus',
                 'ARM': 'arc',
                 'ARG': 'arg',
+                'CAL': 'cld',
                 'ARB': 'arb'
             }"/>
     <xsl:key name="lang" match="entry" use="@key"/>
 
 
     <xsl:template
-        match="LAT | ARM | HEB | PRV | PRT | LAM | ITL | GRK | GER | GAL | FRN | ENG | CAT | BAS | ARA | ARG | ARB">
-
+        match="LAT | ARM | HEB | PRV | PRT | LAM | ITL | GRK | GER | GAL | FRN | ENG | CAT | BAS | ARA | ARG | ARB | CAL">
         <xsl:element name="foreign">
             <xsl:attribute name="xml:lang" select="$lang-map(local-name())"/>
             <xsl:apply-templates/>
@@ -292,7 +393,7 @@
     </xsl:template>
 
 
-    <xsl:template match="OTHER_HAND_INSERTION">
+    <xsl:template match="SCRIBAL_INSERTION_OTHER_HAND">
         <xsl:element name="add">
             <xsl:attribute name="hand">#other</xsl:attribute>
             <xsl:apply-templates/>
@@ -310,7 +411,7 @@
 
 
 
-    <xsl:template match="OTHER_HAND_DELETION">
+    <xsl:template match="SCRIBAL_DELETION_OTHER_HAND">
         <xsl:element name="del">
             <xsl:attribute name="hand">#other</xsl:attribute>
             <xsl:apply-templates/>

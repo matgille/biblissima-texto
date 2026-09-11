@@ -132,6 +132,7 @@ def iterxml(text, id=""):
 				raise ValueError(f"Fermeture '}}' sans balise ouverte. Text {id} État de fin du texte: \n{' '.join(output[-100:])}")
 
 			tag = stack.pop()
+
 			output.append(f"</{tag}>")
 
 		else:
@@ -156,7 +157,7 @@ def iterxml(text, id=""):
 				stack.append(tag)
 			elif other_hand_insertion:
 				# On enlève le '=' pour obtenir un nom XML classique
-				tag = "OTHER_HAND_INSERTION"
+				tag = "SCRIBAL_INSERTION_OTHER_HAND"
 				output.append(f"<{tag}>")
 				stack.append(tag)
 			elif editorial_guess:
@@ -202,6 +203,15 @@ def iterxml(text, id=""):
 
 	return ''.join(output)
 
+def identify_shifted_word_before_pb(text_string):
+	"""
+	Permet d'identifier les mots coupés qui sont reconstruits en fin de page (la fin du mot est en page suivante)
+	:param text_string:
+	:return:
+	"""
+	regexp = re.compile(r'-(\S+)</CB(\d+)>')
+	text_string = re.sub(regexp, r'-<SHIFTED/>\1</CB\2>', text_string)
+	return text_string
 
 def convert(orig_text, id="", debug: bool=False):
 	text = modify_delimiter(orig_text)
@@ -217,22 +227,12 @@ def convert(orig_text, id="", debug: bool=False):
 	text = treat_linebreaks(text)
 	text = convert_ampersands(text)
 	text = iterxml(text, id)
+	text = identify_shifted_word_before_pb(text)
+	text = revert_parenthesis(text)
+
 
 	# text = revert_parenthesis(text)
 	return text
-
-def convert_cb(xml_tree):
-	cb1 = xml_tree.xpath("//CB1|//CB2|//CB3|//CB4")
-	mapping = {"CB1": "single", "CB2": "double", "CB3": "triple", "CB4": "quadruple"}
-	for cbreak in cb1:
-		childs = cbreak.xpath("child::*")
-		cb = ET.Element("cb")
-		cb.set("type", mapping[cbreak.tag])
-		cbreak.addprevious(cb)
-		# On insère après le noeud, il faut donc faire l'insertion sur la liste inversée
-		[cb.addnext(child) for child in reversed(childs)]
-		cbreak.getparent().remove(cbreak)
-	return xml_tree
 
 def convert_rubric(xml_tree):
 	rubrics = xml_tree.xpath("//RUB")
@@ -241,50 +241,161 @@ def convert_rubric(xml_tree):
 		rubric.set("rend", "rubric")
 	return xml_tree
 
-def convert_substitutions(xml_tree):
-	subst_del = xml_tree.xpath("//SCRIBAL_DELETION[following-sibling::node()[1][self::SCRIBAL_INSERTION]]")
-	for deletion in subst_del:
-		subst = ET.Element("subst")
-		deletion.addprevious(subst)
-		deletion.tag = "del"
-		addition = deletion.xpath("following-sibling::node()[1][self::SCRIBAL_INSERTION]")[0]
-		addition.tag = "add"
-		subst.append(addition)
-		subst.append(deletion)
-
+def treat_initial(xml_tree):
+	all_initials = xml_tree.xpath("//hi[@rend='initiale']")
+	for initiale in all_initials:
+		initiale.tail = re.sub("^\s", "", initiale.tail)
+		initiale.text = initiale.tail[:1]
+		initiale.tail = initiale.tail[1:]
 	return xml_tree
 
-	for substitution in subst:
-		subst_element = ET.Element("subst")
-		deletion = substitution.xpath("EDITORIAL_DELETION")[0]
-		insertion = substitution.xpath("EDITORIAL_INSERTION")[0]
+def inject_metadata(metadata, structured_text):
+	tei_ns = {"tei": "http://www.tei-c.org/ns/1.0"}
+	model_as_tree = ET.parse("models/empty_model.xml")
 
-	return xml_tree
 
-def convert_editorial_deletions(xml_tree):
-	ed_del = xml_tree.xpath("//EDITORIAL_DELETION")
-	for deletion in ed_del:
-		choice = ET.Element("choice")
-		corr = ET.SubElement(choice, "corr")
-		deletion.tag = "sic"
-		deletion.addprevious(choice)
-		choice.append(deletion)
-	return xml_tree
+	# On commence par le titre
+	titleStmt = model_as_tree.xpath("//titleStmt", namespaces=tei_ns)[0]
+	title = titleStmt.xpath("title", namespaces=tei_ns)[0]
+	title.text = f"{metadata['titre']}: version XML-TEI"
+	transcription = titleStmt.xpath("respStmt", namespaces=tei_ns)[0]
+	for idx, transcriptor in enumerate(metadata["transcripteur_parse"]):
+		if idx == 0:
+			name = transcription.xpath("name", namespaces=tei_ns)[0]
+			name.getparent().remove(name)
+		name = ET.Element("name")
+		surname = ET.SubElement(name, "surname")
+		surname.text = transcriptor["surname"]
+		forename = ET.SubElement(name, "forename")
+		forename.text = transcriptor["forename"]
+		transcription.append(name)
+		if idx != len(metadata["transcripteur_parse"]) - 1:
+			name.tail = " et "
 
-def convert_elements(xml_tree):
-	xml_tree = convert_cb(xml_tree=xml_tree)
-	xml_tree = convert_rubric(xml_tree)
-	xml_tree = convert_substitutions(xml_tree)
-	# xml_tree = convert_editorial_deletions(xml_tree)
-	return xml_tree
+	## L'oeuvre
+	sourceDesc = model_as_tree.xpath("//sourceDesc", namespaces=tei_ns)[0]
+	oeuvres = sourceDesc.xpath("listBibl[@type='oeuvres']", namespaces=tei_ns)[0]
+	oeuvre = oeuvres.xpath("bibl", namespaces=tei_ns)[0]
 
-def convert_to_xml(text, orig_text, idx):
+	## Auteur
+	auteur = oeuvre.xpath("author", namespaces=tei_ns)[0]
+	auteur.getparent().remove(auteur)
+	for idx, author in enumerate(metadata["auteur_parse"]):
+		auteur = ET.SubElement(oeuvre, "author")
+		surname = ET.SubElement(auteur, "surname")
+		surname.text = author["surname"]
+		forename = ET.SubElement(auteur, "forename")
+		forename.text = author["forename"]
+		if author['function'] != '':
+			role = ET.SubElement(auteur, "roleName")
+			role.text = author['function']
+		if idx != len(metadata["transcripteur_parse"]) - 1:
+			name.tail = " et "
+		oeuvre.insert(1, auteur)
+
+	# le titre
+	title = oeuvre.xpath("title")[0]
+	title.text = metadata['titre']
+
+	# Date de l'oeuvre
+	date = oeuvre.xpath("date")[0]
+	date_debut = metadata['debut_production_oeuvre']
+	date_fin = metadata['fin_production_oeuvre']
+	if date_debut == date_fin and "a quo" not in date_debut:
+		date.text = date_debut
+		date.set("when", date_debut)
+	elif "a quo" in date_debut:
+		date.set("atLeast", date_debut.replace("a quo", "").strip())
+		date.text = date_debut
+		if "ad quem" in date_fin:
+			date.set("atMost", date_fin.replace("ad quem", "").strip())
+			date.text = date.text + f" {date_fin}"
+	elif "ad quem" in date_fin:
+		date.set("atMost", date_fin.replace("ad quem", "").strip())
+		date.text = date_fin
+		if "a quo" in date_debut:
+			date.set("atLeast", date_fin.replace("ad quem", "").strip())
+			date.text =  f"{date_debut} " + date.text
+	else:
+		date.set("atMost", date_fin)
+		date.set("atLeast", date_debut)
+
+	# Identifiants
+	## HSMS-WORK
+	hsms_work = oeuvre.xpath("idno[@type='HSMS-WORK']")[0]
+	hsms_work.text = metadata['oeuvre_id']
+
+	## BETA texid
+	try:
+		hsms_work = oeuvre.xpath("idno[@type='philobiblon-texid']")[0]
+		hsms_work.text = metadata['beta_texid']
+	except KeyError:
+		hsms_work.text = "TODO"
+
+		## biblissima ID
+		try:
+			hsms_work = oeuvre.xpath("idno[@type='biblissima']")[0]
+			hsms_work.text = metadata['biblissima']
+		except KeyError:
+			hsms_work.text = "TODO"
+
+	# XML id original transcription
+	bibl_source = sourceDesc.xpath("bibl[@type='source-transcription']")[0]
+	bibl_source.set("{http://www.w3.org/XML/1998/namespace}id", metadata["file_id_hsms"])
+	title = bibl_source.xpath("title")[0]
+	title.text = f"TEXT.{metadata['file_id_hsms']}.txt"
+	ptr = bibl_source.xpath("note/ptr")[0]
+	target = ptr.xpath("@target")[0]
+	ptr.set("target", target.replace("TEXT.X.txt", title.text))
+	ptr.tail = f", {metadata['version_OSTA']}."
+	if metadata["notes_codex_editeur"]:
+		quote = ET.Element("quote")
+		ptr.tail = ptr.tail + " Notes (codex): "
+		quote.text = f"{metadata['notes_codex_editeur']}."
+		ptr.addnext(quote)
+	if metadata["notes_oeuvre_editeur"]:
+		work_quote = ET.Element("quote")
+		work_quote.text = f"{metadata['notes_oeuvre_editeur']}."
+		if metadata["notes_codex_editeur"]:
+			quote = bibl_source.xpath("note/quote")[0]
+			quote.tail = " Notes (oeuvre): "
+			quote.addnext(work_quote)
+		else:
+			ptr.tail = ptr.tail + f"{metadata['notes_oeuvre_editeur']}."
+			ptr.addnext(work_quote)
+
+	# Identifiants du manuscrit
+	msDesc = sourceDesc.xpath("msDesc")[0]
+	identifier = msDesc.xpath("msIdentifier")[0]
+	if metadata['digitalisation']:
+		identifier.set("facs", metadata['digitalisation'])
+
+
+
+	# On injecte le texte pré-structuré dans le body
+	text = model_as_tree.xpath("//body", namespaces=tei_ns)[0]
+	p = text.xpath("p", namespaces=tei_ns)[0]
+	p.getparent().remove(p)
+	text.append(structured_text)
+	root = model_as_tree.getroot()
+	root.tag = ET.QName(root).localname
+	print(metadata)
+	return model_as_tree
+
+
+
+
+
+def convert_to_xml(text, orig_text, md):
+	idx = md["file_id_hsms"]
 	TEI_NS = "http://www.tei-c.org/ns/1.0"
 	NSMAP = {None: TEI_NS}
-	parent_div = ET.Element(f"div")
+	first_div = ET.Element(f"div")
 	try:
 		childDiv = ET.fromstring(f"<p>{text}</p>")
-		parent_div.append(childDiv)
+		first_div.append(childDiv)
+		first_div = treat_initial(first_div)
+		tei_file = inject_metadata(md, first_div)
 	except ET.XMLSyntaxError as e:
 		print(f"Erreur de syntaxe: {e}. Check text_{idx}")
 		with open(f"test_data/output/text_{idx}.txt", "w") as output_file:
@@ -293,5 +404,5 @@ def convert_to_xml(text, orig_text, idx):
 			output_file.write(orig_text)
 		exit()
 	with open(f"test_data/xml/text_{idx}.xml", "w") as output_xml:
-		output_xml.write(ET.tostring(parent_div, pretty_print=False).decode())
+		output_xml.write(ET.tostring(tei_file, pretty_print=False).decode())
 
