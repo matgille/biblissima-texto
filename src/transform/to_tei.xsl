@@ -20,7 +20,7 @@
     <!--Permet de copie en appliquant le namespace local de la feuille (défault: tei)-->
 
     <xsl:variable name="dir"
-        >/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data2</xsl:variable>
+        >/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/test_data</xsl:variable>
 
     <xsl:template match="/">
         <!--On crée un doc principal pour vérifier les validités-->
@@ -63,7 +63,7 @@
             </xsl:variable>
             <xsl:result-document href="{$outname}" indent="true">
                 <xsl:element name="TEI" xmlns="http://www.tei-c.org/ns/1.0">
-                    <xsl:apply-templates select="TEI"/>
+                    <xsl:apply-templates select="/TEI/child::node()"/>
                 </xsl:element>
             </xsl:result-document>
         </xsl:for-each>
@@ -206,6 +206,8 @@
             <xsl:apply-templates/>
         </xsl:element>
     </xsl:template>
+
+    <!--<fw rend="titre-courant">\ .v.</fw> mal transformé-->
 
 
     <xsl:template match="HD[matches(., '^.*\\\s*[cvujilx]+$')]">

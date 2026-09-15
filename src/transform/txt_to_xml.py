@@ -3,6 +3,9 @@ import copy
 import lxml.etree as ET
 import re
 
+import pandas as pd
+
+import src.transform.utils as utils
 
 
 
@@ -255,13 +258,13 @@ def inject_metadata(metadata, structured_text):
 
 
 	# On commence par le titre
-	titleStmt = model_as_tree.xpath("//titleStmt", namespaces=tei_ns)[0]
-	title = titleStmt.xpath("title", namespaces=tei_ns)[0]
+	titleStmt = model_as_tree.xpath("//titleStmt")[0]
+	title = titleStmt.xpath("title")[0]
 	title.text = f"{metadata['titre']}: version XML-TEI"
-	transcription = titleStmt.xpath("respStmt", namespaces=tei_ns)[0]
+	transcription = titleStmt.xpath("respStmt")[0]
 	for idx, transcriptor in enumerate(metadata["transcripteur_parse"]):
 		if idx == 0:
-			name = transcription.xpath("name", namespaces=tei_ns)[0]
+			name = transcription.xpath("name")[0]
 			name.getparent().remove(name)
 		name = ET.Element("name")
 		surname = ET.SubElement(name, "surname")
@@ -269,13 +272,10 @@ def inject_metadata(metadata, structured_text):
 		forename = ET.SubElement(name, "forename")
 		forename.text = transcriptor["forename"]
 		transcription.append(name)
-		if idx != len(metadata["transcripteur_parse"]) - 1:
-			name.tail = " et "
 
 	## L'oeuvre
 	sourceDesc = model_as_tree.xpath("//sourceDesc", namespaces=tei_ns)[0]
-	oeuvres = sourceDesc.xpath("listBibl[@type='oeuvres']", namespaces=tei_ns)[0]
-	oeuvre = oeuvres.xpath("bibl", namespaces=tei_ns)[0]
+	oeuvre = sourceDesc.xpath("bibl[@type='work']", namespaces=tei_ns)[0]
 
 	## Auteur
 	auteur = oeuvre.xpath("author", namespaces=tei_ns)[0]
@@ -289,8 +289,6 @@ def inject_metadata(metadata, structured_text):
 		if author['function'] != '':
 			role = ET.SubElement(auteur, "roleName")
 			role.text = author['function']
-		if idx != len(metadata["transcripteur_parse"]) - 1:
-			name.tail = " et "
 		oeuvre.insert(1, auteur)
 
 	# le titre
@@ -301,24 +299,11 @@ def inject_metadata(metadata, structured_text):
 	date = oeuvre.xpath("date")[0]
 	date_debut = metadata['debut_production_oeuvre']
 	date_fin = metadata['fin_production_oeuvre']
-	if date_debut == date_fin and "a quo" not in date_debut:
-		date.text = date_debut
-		date.set("when", date_debut)
-	elif "a quo" in date_debut:
-		date.set("atLeast", date_debut.replace("a quo", "").strip())
-		date.text = date_debut
-		if "ad quem" in date_fin:
-			date.set("atMost", date_fin.replace("ad quem", "").strip())
-			date.text = date.text + f" {date_fin}"
-	elif "ad quem" in date_fin:
-		date.set("atMost", date_fin.replace("ad quem", "").strip())
-		date.text = date_fin
-		if "a quo" in date_debut:
-			date.set("atLeast", date_fin.replace("ad quem", "").strip())
-			date.text =  f"{date_debut} " + date.text
-	else:
-		date.set("atMost", date_fin)
-		date.set("atLeast", date_debut)
+	parent = date.getparent()
+	index = parent.index(date)
+	parent.remove(date)
+	parent.insert(index, utils.process_date(date, date_debut, date_fin))
+
 
 	# Identifiants
 	## HSMS-WORK
@@ -334,8 +319,8 @@ def inject_metadata(metadata, structured_text):
 
 		## biblissima ID
 		try:
-			hsms_work = oeuvre.xpath("idno[@type='biblissima']")[0]
-			hsms_work.text = metadata['biblissima']
+			hsms_work = oeuvre.xpath("idno[@type='factgrid_mss_id']")[0]
+			hsms_work.text = metadata['factgrid_mss_id']
 		except KeyError:
 			hsms_work.text = "TODO"
 
@@ -364,13 +349,128 @@ def inject_metadata(metadata, structured_text):
 			ptr.tail = ptr.tail + f"{metadata['notes_oeuvre_editeur']}."
 			ptr.addnext(work_quote)
 
+	# On gère les informations en fonction du support de l'écriture
+	format = metadata['format']
+	msDesc = sourceDesc.xpath("msDesc")[0]
+	TEI = model_as_tree.getroot()
+
+	# History
+	origDate = sourceDesc.xpath("descendant::origDate")[0]
+	date_debut = metadata['debut_production_codex']
+	date_fin = metadata['fin_production_codex']
+	# Ajouter la gestion de l'approximation (ca.)
+	if format == "manuscrito":
+		# On supprime le biblStruct destiné à la description de l'édition
+		print_nodes = sourceDesc.xpath("biblStruct[@ana = '#frbr.manifestation']")[0]
+		print_nodes.getparent().remove(print_nodes)
+		print_comments = sourceDesc.xpath("descendant::comment()[contains(., 'Édition')]")
+		[item.getparent().remove(item) for item in print_comments]
+
+		# On corrige l'analyse du msDesc
+		msDesc.set("ana", "#frbr.manifestation_singleton")
+
+		parent = origDate.getparent()
+		index = parent.index(origDate)
+		parent.remove(origDate)
+		parent.insert(index, utils.process_date(origDate, date_debut, date_fin))
+	else:
+		msDesc.set("ana", "#frbr.item")
+		biblStruct = sourceDesc.xpath("biblStruct[@ana = '#frbr.manifestation']")[0]
+		publisher = biblStruct.xpath("monogr/imprint/publisher")[0]
+		publisher.text = metadata["producteur"]
+		pubPlace = biblStruct.xpath("monogr/imprint/pubPlace")[0]
+		pubPlace.text = metadata["lieu_production"]
+		publicationDate = biblStruct.xpath("monogr/imprint/date")[0]
+		parent = publicationDate.getparent()
+		index = parent.index(publicationDate)
+		parent.remove(publicationDate)
+		parent.insert(index, utils.process_date(publicationDate, date_debut, date_fin))
+		history = msDesc.xpath("descendant::history")[0]
+		history.getparent().remove(history)
+		# Ajouter la date ici
+	# On gère les informations en fonction du support de l'écriture
+
+	# Gestion de la traduction
+	translation_bibl = sourceDesc.xpath("bibl[@type='translation']")[0]
+	if metadata['traducteur_parse']:
+		TEI.set("type", "traduction")
+		author = translation_bibl.xpath("author")[0]
+		author.getparent().remove(author)
+		for idx, translator in enumerate(metadata["traducteur_parse"]):
+			auteur = ET.SubElement(oeuvre, "author")
+			surname = ET.SubElement(auteur, "surname")
+			surname.text = translator["surname"]
+			forename = ET.SubElement(auteur, "forename")
+			forename.text = translator["forename"]
+			if translator['function'] != '':
+				role = ET.SubElement(auteur, "roleName")
+				role.text = translator['function']
+			if idx != len(metadata["traducteur_parse"]) - 1:
+				name.tail = " et "
+			translation_bibl.insert(1, auteur)
+	else:
+		TEI.set("type", "oeuvre_originale")
+		translation_bibl.getparent().remove(translation_bibl)
+		translation_comments = sourceDesc.xpath("descendant::comment()[contains(., 'Traductions')]")
+		[item.getparent().remove(item) for item in translation_comments]
+
 	# Identifiants du manuscrit
 	msDesc = sourceDesc.xpath("msDesc")[0]
 	identifier = msDesc.xpath("msIdentifier")[0]
 	if metadata['digitalisation']:
 		identifier.set("facs", metadata['digitalisation'])
+	lieu_conservation = metadata['bibliotheque_conservation'].split(":")[0].strip()
+	try:
+		bibliotheque = metadata['bibliotheque_conservation'].split(":")[1].strip()
+	except IndexError:
+		bibliotheque = "UNK"
+	settlement = identifier.xpath("settlement")[0]
+	settlement.text = lieu_conservation
+	institution = identifier.xpath("repository")[0]
+	institution.text = bibliotheque
+	institution.set("corresp", metadata['factgrid_institution_id'])
+
+	hsms_id = identifier.xpath("idno[@type='HSMS-ID']")[0]
+	hsms_id.text = metadata['HSMS_ident']
+	# BNE: adapter.
+	id_bne = identifier.xpath("idno[@type='BNE']")[0]
+	id_bne.getparent().remove(id_bne)
+	beta_copid = identifier.xpath("idno[@type='philobiblon-copid']")[0]
+	beta_manid = identifier.xpath("idno[@type='philobiblon-manid']")[0]
+	factgrid_id = identifier.xpath("idno[@type='factgrid-id']")[0]
+	if metadata["beta_manid"]:
+		beta_manid.text = str(int(metadata['beta_manid']))
+		beta_manid.set("corresp", metadata['lien_philobiblon'])
+		beta_copid.getparent().remove(beta_copid)
+		factgrid_id.set("corresp", metadata['factgrid_mss_id'])
+		factgrid_id.text = metadata['factgrid_mss_id'].split("/")[-1]
+	if metadata["beta_copid"]:
+		try:
+			beta_copid.text = str(int(metadata['beta_copid']))
+		except ValueError:
+			beta_copid.text = metadata['beta_copid']
+		beta_copid.set("corresp", metadata['lien_philobiblon'])
+		beta_manid.getparent().remove(beta_manid)
+		factgrid_id.set("corresp", metadata['factgrid_mss_id'])
+		factgrid_id.text = metadata['factgrid_mss_id'].split("/")[-1]
+	cote = identifier.xpath("idno[@type='cote']")[0]
+	cote.text = metadata["cote"]
 
 
+
+	# msContent
+	msContent = msDesc.xpath("msContents")[0]
+	msItem = msContent.xpath("msItem")
+	for item in msItem:
+		locus = item.xpath("locus")[0]
+		locus.text = metadata['emplacement_oeuvre']
+		title = item.xpath("title")[0]
+		title.text = metadata['titre_unite_codico']
+		if not pd.isna(metadata['beta_cnum']):
+			cnum = item.xpath("idno")[0]
+			comment = cnum.xpath("comment()")[0]
+			cnum.remove(comment)
+			cnum.text = str(int(metadata['beta_cnum']))
 
 	# On injecte le texte pré-structuré dans le body
 	text = model_as_tree.xpath("//body", namespaces=tei_ns)[0]
@@ -389,7 +489,6 @@ def inject_metadata(metadata, structured_text):
 def convert_to_xml(text, orig_text, md):
 	idx = md["file_id_hsms"]
 	TEI_NS = "http://www.tei-c.org/ns/1.0"
-	NSMAP = {None: TEI_NS}
 	first_div = ET.Element(f"div")
 	try:
 		childDiv = ET.fromstring(f"<p>{text}</p>")

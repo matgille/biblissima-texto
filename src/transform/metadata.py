@@ -1,6 +1,6 @@
 import re
 import src.transform.utils as utils
-import src.transform.get_texid as retrieveTexid
+import src.transform.queries as queries
 import pandas as pd
 
 def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
@@ -110,6 +110,10 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	cote = codex_filtre["Signatura"].values[0]
 	##### Identifiants
 
+	#### Support de l'écriture
+	format = codex_filtre["formato"].values[0]
+	#### Support de l'écriture
+
 	#### Informations bibliographiques
 	bibliotheque_conservation = codex_filtre["Biblioteca"].values[0]
 	lien_philobiblon = codex_filtre["PhiloBiblonlink"].values[0]
@@ -132,7 +136,6 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	titre = oeuvre_filtree["Título"].values[0]
 	emplacement_oeuvre = oeuvre_filtree["folio"].values[0]
 	folio_codex = codex_filtre["número folios"].values[0]
-	format = codex_filtre["formato"].values[0]
 
 	debut_production_oeuvre = oeuvre_filtree["OPDT-inicio"].values[0]
 	fin_production_oeuvre = oeuvre_filtree["OPDT-fin"].values[0]
@@ -162,10 +165,23 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	notes_codex_editeur = codex_filtre["notas"].values[0]
 	version_OSTA = codex_filtre["versión"].values[0]
 
-	if lien_philobiblon != None and beta_cnum != None:
-		beta_texid = retrieveTexid.search_texid(lien_philobiblon, cnum=beta_cnum)
+	if beta_copid:
+		request = queries.search_factgrid(identifier=beta_copid, type_identifier="copid")
+	elif beta_manid:
+		request = queries.search_factgrid(identifier=beta_manid, type_identifier="manid")
 	else:
-		beta_texid = "Unknown"
+		request = None
+	if request:
+		libraries_id, factgrid_mss_id, institution_id = request
+	else:
+		libraries_id, factgrid_mss_id, institution_id = "Unknown", "Unknown", "Unknown"
+
+
+	if lien_philobiblon != None and beta_cnum != None:
+		# beta_texid, unit_title = None, None
+		beta_texid, codex_title, unit_incipit = queries.search_philobiblon(lien_philobiblon, cnum=beta_cnum)
+	else:
+		beta_texid, codex_title, unit_incipit = "Unknown", "Unknown"
 
 	metadata_dict = {
 		"version_OSTA": version_OSTA,
@@ -187,11 +203,15 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 		"folio_codex": folio_codex,
 		"emplacement_oeuvre": emplacement_oeuvre,
 		"titre": titre,
+		"titre_unite_codico": unit_title,
 		"traducteur_parse": traducteur_parse,
 		"transcripteur_parse": transcripteur_parse,
 		"auteur_parse": auteur_parse,
 		"digitalisation": digitalisation,
 		"lien_philobiblon": lien_philobiblon,
+		"identifiant_philobiblon_bibliotheques": libraries_id,
+		"factgrid_mss_id": factgrid_mss_id,
+		"factgrid_institution_id": institution_id,
 		"beta_texid": beta_texid,
 		"bibliotheque_conservation": bibliotheque_conservation,
 		"cote": cote,
