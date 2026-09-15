@@ -166,9 +166,9 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	version_OSTA = codex_filtre["versión"].values[0]
 
 	if beta_copid:
-		request = queries.search_factgrid(identifier=beta_copid, type_identifier="copid")
+		request = queries.search_factgrid_beta_id(identifier=beta_copid, type_identifier="copid")
 	elif beta_manid:
-		request = queries.search_factgrid(identifier=beta_manid, type_identifier="manid")
+		request = queries.search_factgrid_beta_id(identifier=beta_manid, type_identifier="manid")
 	else:
 		request = None
 	if request:
@@ -176,12 +176,18 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	else:
 		libraries_id, factgrid_mss_id, institution_id = "Unknown", "Unknown", "Unknown"
 
+	if not pd.isna(beta_cnum):
+		incipit_unit, explicit_unit = queries.retrieve_incipit_explicit_per_unit(identifier=beta_cnum)
+	else:
+		incipit_unit, explicit_unit = "Unknown", "Unknown"
+
+
 
 	if lien_philobiblon != None and beta_cnum != None:
 		# beta_texid, unit_title = None, None
-		beta_texid, codex_title, unit_incipit = queries.search_philobiblon(lien_philobiblon, cnum=beta_cnum)
+		beta_texid, unit_title = queries.search_philobiblon(lien_philobiblon, cnum=beta_cnum)
 	else:
-		beta_texid, codex_title, unit_incipit = "Unknown", "Unknown"
+		beta_texid, unit_title = "Unknown", "Unknown"
 
 	metadata_dict = {
 		"version_OSTA": version_OSTA,
@@ -212,6 +218,8 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 		"identifiant_philobiblon_bibliotheques": libraries_id,
 		"factgrid_mss_id": factgrid_mss_id,
 		"factgrid_institution_id": institution_id,
+		"incipit_unit": incipit_unit,
+		"explicit_unit": explicit_unit,
 		"beta_texid": beta_texid,
 		"bibliotheque_conservation": bibliotheque_conservation,
 		"cote": cote,

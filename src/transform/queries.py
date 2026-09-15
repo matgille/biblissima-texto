@@ -7,7 +7,59 @@ import requests
 from lxml import html
 
 
-def search_factgrid(identifier, type_identifier):
+def retrieve_incipit_explicit_per_unit(identifier):
+    """
+    On part du point d'entrée CNUM pour récupérer l'incipit et l'explicit du fragment.
+    :param identifier:
+    :return:
+    """
+    time.sleep(1)
+    SPARQL_ENDPOINT = "https://database.factgrid.de/sparql"
+
+    if isinstance(identifier, float):
+        identifier = str(round(identifier))
+
+    query = f"""
+SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?excipit WHERE {{
+  ?cnum wdt:P476 "BETA cnum {identifier}" .
+  OPTIONAL {{
+    ?cnum p:P543 ?stmt .
+    ?stmt ps:P543 ?segmentation .
+    OPTIONAL {{ ?stmt pq:P70  ?incipit . }}
+    OPTIONAL {{ ?stmt pq:P602 ?excipit . }}
+  }}
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
+}}
+"""
+    r = requests.get(
+        SPARQL_ENDPOINT,
+        params={"query": query},
+        headers={
+            "Accept": "application/sparql-results+json",
+            "User-Agent": "Biblissima-texte/1.0 (contact matthias.gille-levenson@ens-lyon.fr)",
+        },
+        timeout=10,
+    )
+
+    data = r.json()
+    try:
+        incipit = data['results']['bindings'][0]['incipit']['value']
+    except (IndexError, KeyError):
+        incipit = "Unknown"
+    try:
+        explicit = data['results']['bindings'][-1]['explicit']['value']
+    except KeyError:
+        try:
+            explicit = data['results']['bindings'][-1]['incipit']['value']
+        except KeyError:
+            explicit = "Unknown"
+    except IndexError:
+        explicit = "Unknown"
+
+    return incipit, explicit
+
+
+def search_factgrid_beta_id(identifier, type_identifier):
     time.sleep(1)
     SPARQL_ENDPOINT = "https://database.factgrid.de/sparql"
 
@@ -47,8 +99,6 @@ WHERE {{
     )
 
     data = r.json()
-    with open("/home/mgl/Documents/test.json", "w")  as output_json:
-        json.dump(data, output_json)
     cols = data["head"]["vars"]
     reordered = [
         {c: b.get(c, {}).get("value") for c in cols}
@@ -102,4 +152,4 @@ def search_philobiblon(url, cnum):
     regexp = re.compile("texid (\d+)")
     td_texid = td_texid[0].text_content().strip()
     texid = re.search(regexp, td_texid).group(1)
-    return texid, codex_title, unit_incipit
+    return texid, title

@@ -464,8 +464,10 @@ def inject_metadata(metadata, structured_text):
 	for item in msItem:
 		locus = item.xpath("locus")[0]
 		locus.text = metadata['emplacement_oeuvre']
-		title = item.xpath("title")[0]
-		title.text = metadata['titre_unite_codico']
+		incipit = item.xpath("incipit")[0]
+		incipit.text = metadata['incipit_unit']
+		explicit = item.xpath("explicit")[0]
+		explicit.text = metadata['explicit_unit']
 		if not pd.isna(metadata['beta_cnum']):
 			cnum = item.xpath("idno")[0]
 			comment = cnum.xpath("comment()")[0]
@@ -489,6 +491,7 @@ def inject_metadata(metadata, structured_text):
 def convert_to_xml(text, orig_text, md):
 	idx = md["file_id_hsms"]
 	TEI_NS = "http://www.tei-c.org/ns/1.0"
+	NSMAP = {None: TEI_NS}
 	first_div = ET.Element(f"div")
 	try:
 		childDiv = ET.fromstring(f"<p>{text}</p>")

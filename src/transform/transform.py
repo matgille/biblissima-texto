@@ -22,7 +22,7 @@ def main(files:str) -> None:
 		if md is None:
 			continue
 		# Le texte commence à la 7e ligne
-		orig_text = "\n".join(file_as_list[7:])
+		orig_text = "\n".join(file_as_list[6:])
 		xml_text = conversion.convert(orig_text, id=md["file_id_hsms"])
 		print(md["file_id_hsms"])
 		conversion.convert_to_xml(xml_text, orig_text, md)
