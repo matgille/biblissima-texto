@@ -177,9 +177,9 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 		libraries_id, factgrid_mss_id, institution_id = "Unknown", "Unknown", "Unknown"
 
 	if not pd.isna(beta_cnum):
-		incipit_unit, explicit_unit = queries.retrieve_incipit_explicit_per_unit(identifier=beta_cnum)
+		incipit_unit, explicit_unit, factgrid_cnum = queries.retrieve_incipit_explicit_per_unit(identifier=beta_cnum)
 	else:
-		incipit_unit, explicit_unit = "Unknown", "Unknown"
+		incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
 
 
 
@@ -218,6 +218,7 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 		"identifiant_philobiblon_bibliotheques": libraries_id,
 		"factgrid_mss_id": factgrid_mss_id,
 		"factgrid_institution_id": institution_id,
+		"factgrid_cnum": factgrid_cnum,
 		"incipit_unit": incipit_unit,
 		"explicit_unit": explicit_unit,
 		"beta_texid": beta_texid,

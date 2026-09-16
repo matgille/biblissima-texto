@@ -20,13 +20,13 @@ def retrieve_incipit_explicit_per_unit(identifier):
         identifier = str(round(identifier))
 
     query = f"""
-SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?excipit WHERE {{
+SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit WHERE {{
   ?cnum wdt:P476 "BETA cnum {identifier}" .
   OPTIONAL {{
     ?cnum p:P543 ?stmt .
     ?stmt ps:P543 ?segmentation .
     OPTIONAL {{ ?stmt pq:P70  ?incipit . }}
-    OPTIONAL {{ ?stmt pq:P602 ?excipit . }}
+    OPTIONAL {{ ?stmt pq:P602 ?explicit . }}
   }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
 }}
@@ -43,6 +43,10 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?excipit WHERE {{
 
     data = r.json()
     try:
+        factgrid_cnum_id = data['results']['bindings'][0]['cnum']['value'].split("/")[-1]
+    except (KeyError, IndexError):
+        factgrid_cnum_id = None
+    try:
         incipit = data['results']['bindings'][0]['incipit']['value']
     except (IndexError, KeyError):
         incipit = "Unknown"
@@ -56,11 +60,10 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?excipit WHERE {{
     except IndexError:
         explicit = "Unknown"
 
-    return incipit, explicit
+    return incipit, explicit, factgrid_cnum_id
 
 
 def search_factgrid_beta_id(identifier, type_identifier):
-    time.sleep(1)
     SPARQL_ENDPOINT = "https://database.factgrid.de/sparql"
 
     if isinstance(identifier, float):
@@ -117,6 +120,12 @@ WHERE {{
         return None
 
 def search_philobiblon(url, cnum):
+    """
+    Cette fonction cherche dans l'ancienne version de philobiblon (on ne peut pas requêter la nouvelle avec GET) le titre du témoin dans le mss.
+    :param url:
+    :param cnum:
+    :return:
+    """
     print(f"Searching for {url} and cnum {cnum}")
     response = requests.get(url)
     response.raise_for_status()

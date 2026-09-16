@@ -255,6 +255,7 @@ def treat_initial(xml_tree):
 def inject_metadata(metadata, structured_text):
 	tei_ns = {"tei": "http://www.tei-c.org/ns/1.0"}
 	model_as_tree = ET.parse("models/empty_model.xml")
+	factgrid_endpoint = "https://database.factgrid.de/"
 
 
 	# On commence par le titre
@@ -312,7 +313,7 @@ def inject_metadata(metadata, structured_text):
 
 	## BETA texid
 	try:
-		hsms_work = oeuvre.xpath("idno[@type='philobiblon-texid']")[0]
+		hsms_work = oeuvre.xpath("idno[@type='beta-texid']")[0]
 		hsms_work.text = metadata['beta_texid']
 	except KeyError:
 		hsms_work.text = "TODO"
@@ -435,8 +436,8 @@ def inject_metadata(metadata, structured_text):
 	# BNE: adapter.
 	id_bne = identifier.xpath("idno[@type='BNE']")[0]
 	id_bne.getparent().remove(id_bne)
-	beta_copid = identifier.xpath("idno[@type='philobiblon-copid']")[0]
-	beta_manid = identifier.xpath("idno[@type='philobiblon-manid']")[0]
+	beta_copid = identifier.xpath("idno[@type='beta-copid']")[0]
+	beta_manid = identifier.xpath("idno[@type='beta-manid']")[0]
 	factgrid_id = identifier.xpath("idno[@type='factgrid-id']")[0]
 	if metadata["beta_manid"]:
 		beta_manid.text = str(int(metadata['beta_manid']))
@@ -456,7 +457,15 @@ def inject_metadata(metadata, structured_text):
 	cote = identifier.xpath("idno[@type='cote']")[0]
 	cote.text = metadata["cote"]
 
-
+	# La langue utilisée.
+	langues = metadata["langues"]
+	langUsage = model_as_tree.xpath("//langUsage")[0]
+	child = langUsage.xpath("language")[0]
+	langUsage.remove(child)
+	for lang in langues:
+		language = ET.SubElement(langUsage, "language")
+		language.text = lang
+		language.set("ident", lang)
 
 	# msContent
 	msContent = msDesc.xpath("msContents")[0]
@@ -468,11 +477,17 @@ def inject_metadata(metadata, structured_text):
 		incipit.text = metadata['incipit_unit']
 		explicit = item.xpath("explicit")[0]
 		explicit.text = metadata['explicit_unit']
-		if not pd.isna(metadata['beta_cnum']):
-			cnum = item.xpath("idno")[0]
-			comment = cnum.xpath("comment()")[0]
-			cnum.remove(comment)
-			cnum.text = str(int(metadata['beta_cnum']))
+		if not pd.isna(metadata['beta_cnum']) and metadata['beta_cnum']:
+			beta_cnum = item.xpath("idno[@type='beta-cnum']")[0]
+			comment = beta_cnum.xpath("comment()")[0]
+			beta_cnum.remove(comment)
+			beta_cnum.text = str(int(metadata['beta_cnum']))
+			cnum_factgrid = item.xpath("idno[@type='factgrid-cnum']")[0]
+			comment = cnum_factgrid.xpath("comment()")[0]
+			cnum_factgrid.remove(comment)
+			cnum_factgrid.text = metadata['factgrid_cnum']
+			cnum_factgrid.set("corresp", f"{factgrid_endpoint}entity/{metadata['factgrid_cnum']}")
+
 
 	# On injecte le texte pré-structuré dans le body
 	text = model_as_tree.xpath("//body", namespaces=tei_ns)[0]

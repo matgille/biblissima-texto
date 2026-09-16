@@ -16,14 +16,15 @@ def main(files:str) -> None:
 
 	name_parser = pipeline("ner", model="ele-sage/distilbert-base-uncased-name-splitter",
 						   aggregation_strategy="simple")
-	for idx, file in tqdm.tqdm(enumerate(files)):
+	for idx, file in tqdm.tqdm(enumerate(files[:51])):
 		file_as_list = utils.read_to_lines(file)
 		md = metadata.retrieve_metadata(file_as_list, name_parser)
 		if md is None:
 			continue
 		# Le texte commence à la 7e ligne
 		orig_text = "\n".join(file_as_list[6:])
-		xml_text = conversion.convert(orig_text, id=md["file_id_hsms"])
+		# xml_text = conversion.convert(orig_text, id=md["file_id_hsms"])
+		xml_text = conversion.convert(orig_text, id=md["oeuvre_id"])
 		print(md["file_id_hsms"])
 		conversion.convert_to_xml(xml_text, orig_text, md)
 
