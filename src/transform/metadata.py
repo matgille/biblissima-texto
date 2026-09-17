@@ -186,7 +186,7 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		if disable_queries is True:
 			incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
 		else:
-			incipit_unit, explicit_unit, factgrid_cnum = queries.retrieve_incipit_explicit_per_unit(identifier=beta_cnum)
+			incipit_unit, explicit_unit, factgrid_cnum, _, _, _ = queries.retrieve_msContents(identifier=beta_cnum)
 	else:
 		incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
 

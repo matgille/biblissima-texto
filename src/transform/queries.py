@@ -7,7 +7,7 @@ import requests
 from lxml import html
 
 
-def retrieve_incipit_explicit_per_unit(identifier):
+def retrieve_msContents(identifier):
     """
     On part du point d'entrée CNUM pour récupérer l'incipit et l'explicit du fragment.
     :param identifier:
@@ -20,14 +20,22 @@ def retrieve_incipit_explicit_per_unit(identifier):
         identifier = str(round(identifier))
 
     query = f"""
-SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit WHERE {{
+SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit ?unit_incipit ?unit_explicit ?title WHERE {{
   ?cnum wdt:P476 "BETA cnum {identifier}" .
   OPTIONAL {{
     ?cnum p:P543 ?stmt .
     ?stmt ps:P543 ?segmentation .
     OPTIONAL {{ ?stmt pq:P70  ?incipit . }}
     OPTIONAL {{ ?stmt pq:P602 ?explicit . }}
+    
   }}
+  OPTIONAL {{
+            ?cnum wdt:P590 ?work .          # 1er saut : cnum -> œuvre (texid)
+            OPTIONAL {{ ?work wdt:P11 ?title . }}   # 2e saut : titre de l'œuvre
+            ?work ps:P543 ?segmentation .
+                OPTIONAL {{ ?work pq:P70  ?unit_incipit . }}
+                OPTIONAL {{ ?work pq:P602 ?unit_explicit . }}
+          }}
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
 }}
 """
@@ -42,6 +50,18 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit WHERE {{
     )
 
     data = r.json()
+    try:
+        unit_incipit = data['results']['bindings'][0]['unit_incipit']['value']
+    except (KeyError, IndexError):
+        unit_incipit = None
+    try:
+        unit_explicit = data['results']['bindings'][0]['unit_explicit']['value']
+    except (KeyError, IndexError):
+        unit_explicit = None
+    try:
+        unit_title = data['results']['bindings'][0]['title']['value']
+    except (KeyError, IndexError):
+        unit_title = None
     try:
         factgrid_cnum_id = data['results']['bindings'][0]['cnum']['value'].split("/")[-1]
     except (KeyError, IndexError):
@@ -60,7 +80,11 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit WHERE {{
     except IndexError:
         explicit = "Unknown"
 
-    return incipit, explicit, factgrid_cnum_id
+    # Des fois on n'a que l'incipit.
+    if incipit == explicit and len(data['results']['bindings']) == 1:
+        explicit = "Unknown"
+
+    return incipit, explicit, factgrid_cnum_id, unit_title, unit_incipit, unit_explicit
 
 
 def search_factgrid_beta_id(identifier, type_identifier):

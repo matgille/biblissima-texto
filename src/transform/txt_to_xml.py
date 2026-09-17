@@ -562,7 +562,12 @@ def keep_only_given_work(tree, ident):
 	body.getparent().replace(body, replaced_body)
 	return tree
 
-def convert_to_xml(text, orig_text, md, keep_only_work=False, save_as_codex=False):
+def replace_msContents(tree, node_to_update):
+	msContent = tree.xpath("descendant::msContents")[0]
+	msContent.getparent().replace(msContent, node_to_update)
+	return tree
+
+def convert_to_xml(text, orig_text, msContents, md, keep_only_work=False, save_as_codex=False):
 	work_id = md["oeuvre_id"]
 	TEI_NS = "http://www.tei-c.org/ns/1.0"
 	first_div = ET.Element(f"div")
@@ -571,6 +576,8 @@ def convert_to_xml(text, orig_text, md, keep_only_work=False, save_as_codex=Fals
 		first_div.append(childDiv)
 		first_div = treat_initial(first_div)
 		tei_file = inject_metadata(md, first_div)
+		if msContents:
+			tei_file = replace_msContents(tei_file, msContents)
 		if keep_only_work is True:
 			tei_file = keep_only_given_work(tei_file, work_id)
 	except ET.XMLSyntaxError as e:

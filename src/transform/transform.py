@@ -1,5 +1,7 @@
 import re
+import time
 
+import src.transform.queries as queries
 import src.transform.metadata as metadata
 import src.transform.utils as utils
 import src.transform.txt_to_xml as conversion
@@ -7,6 +9,57 @@ import tqdm
 from transformers import pipeline
 import glob
 import sys
+import lxml.etree as ET
+import pandas as pd
+
+def create_multiple_msItem(codex_ident):
+	"""
+	Récupère toutes les métadonnées pour les oeuvres à plusieurs unités (lettres, poésie, glose)
+	:return:
+	"""
+
+	df_oeuvres = utils.import_table_as_dataframe(path="databases/tabla-obras.csv", sep="\t")
+
+	oeuvre_filtree_codex = df_oeuvres[df_oeuvres["HSMS ID"] == codex_ident]
+
+	factgrid_endpoint = "https://database.factgrid.de/"
+	msContents = ET.Element("msContents")
+
+	for idx, work in oeuvre_filtree_codex.iterrows():
+		beta_cnum_val = work["BETA cnum"]
+		work_id = work["Obra ID"]
+		disable_queries = False
+		if not pd.isna(beta_cnum_val):
+			if disable_queries is True:
+				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, unit_incipit, unit_explicit = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+			else:
+				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, unit_incipit, unit_explicit = queries.retrieve_msContents(
+					identifier=beta_cnum_val)
+		else:
+			incipit_unit, explicit_unit, factgrid_cnum_val, unit_incipit, unit_explicit = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+
+
+		item = ET.SubElement(msContents, "msItem")
+		item.set("{http://www.w3.org/XML/1998/namespace}id", work_id)
+		locus = ET.SubElement(item, "locus")
+		locus.text = work["folio"]
+		incipit = ET.SubElement(item, "incipit")
+		incipit.text = unit_incipit
+		explicit = ET.SubElement(item, "explicit")
+		explicit.text = unit_explicit
+		if not pd.isna(beta_cnum_val) and beta_cnum_val:
+			title = ET.SubElement(item, "title")
+			title.text = unit_title
+			beta_cnum = ET.SubElement(item, "idno")
+			beta_cnum.set("type", "beta-cnum")
+			beta_cnum.text = str(int(beta_cnum_val))
+			cnum_factgrid = ET.SubElement(item, "idno")
+			beta_cnum.set("type", "factgrid-cnum")
+			cnum_factgrid.text = factgrid_cnum_val
+			cnum_factgrid.set("corresp", f"{factgrid_endpoint}entity/{factgrid_cnum_val}")
+	print(ET.tostring(msContents, pretty_print=True).decode())
+	return msContents
+
 
 
 def work_loop(files):
@@ -32,13 +85,15 @@ def work_loop(files):
 		if md['type_textuel'] != "prosa" or "carta" in matieres or md["HSMS_ident"] in splits_exceptions:
 			print(f"Poésie ou lettre identifiée sur {work_id}")
 			number = int(re.search(regexp_multiple_works, work_id).group(1))
-			if number != 1:
+			if number == 1:
+				updated_msContents = create_multiple_msItem(md["HSMS_ident"])
+			else:
 				continue
 			# Sur la poésie, on ne va pas diviser les oeuvres. On ne convertit donc uniquement la première oeuvre.
-			conversion.convert_to_xml(xml_text, orig_text, md, keep_only_work=False, save_as_codex=True)
+			conversion.convert_to_xml(xml_text, orig_text, msContents=updated_msContents, md=md, keep_only_work=False, save_as_codex=True)
 			print("Cas 2")
 		else:
-			conversion.convert_to_xml(xml_text, orig_text, md, keep_only_work=True)
+			conversion.convert_to_xml(xml_text, orig_text, msContents=None, md=md, keep_only_work=True)
 		n += 1
 		if idx > 50:
 			break
