@@ -81,7 +81,7 @@ def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
 	return result
 
 
-def retrieve_metadata(as_list, name_parser) -> dict:
+def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> dict:
 	"""
 	Wrapper pour la récupération de metadonnées
 	:param as_list: le chemin vers le fichier
@@ -94,7 +94,7 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	HSMS_ident = as_list[0].replace("{RMK: ", "").replace(".}", "")
 
 	df_oeuvres["BETA cnum"] =  pd.to_numeric(df_oeuvres["BETA cnum"]).astype('Int64')
-	oeuvre_filtree = df_oeuvres[df_oeuvres["HSMS ID"] == HSMS_ident]
+	oeuvre_filtree = df_oeuvres[df_oeuvres["Obra ID"] == work_id]
 	codex_filtre = df_codex[df_codex["HSMS ID"] == HSMS_ident]
 
 	##### Identifiants
@@ -166,9 +166,15 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 	version_OSTA = codex_filtre["versión"].values[0]
 
 	if beta_copid:
-		request = queries.search_factgrid_beta_id(identifier=beta_copid, type_identifier="copid")
+		if disable_queries:
+			request = "Unknown", "Unknown", "Unknown"
+		else:
+			request = queries.search_factgrid_beta_id(identifier=beta_copid, type_identifier="copid")
 	elif beta_manid:
-		request = queries.search_factgrid_beta_id(identifier=beta_manid, type_identifier="manid")
+		if disable_queries:
+			request = "Unknown", "Unknown", "Unknown"
+		else:
+			request = queries.search_factgrid_beta_id(identifier=beta_manid, type_identifier="manid")
 	else:
 		request = None
 	if request:
@@ -177,15 +183,20 @@ def retrieve_metadata(as_list, name_parser) -> dict:
 		libraries_id, factgrid_mss_id, institution_id = "Unknown", "Unknown", "Unknown"
 
 	if not pd.isna(beta_cnum):
-		incipit_unit, explicit_unit, factgrid_cnum = queries.retrieve_incipit_explicit_per_unit(identifier=beta_cnum)
+		if disable_queries is True:
+			incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
+		else:
+			incipit_unit, explicit_unit, factgrid_cnum = queries.retrieve_incipit_explicit_per_unit(identifier=beta_cnum)
 	else:
 		incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
 
 
 
 	if lien_philobiblon != None and beta_cnum != None:
-		# beta_texid, unit_title = None, None
-		beta_texid, unit_title = queries.search_philobiblon(lien_philobiblon, cnum=beta_cnum)
+		if disable_queries is True:
+			beta_texid, unit_title = "Unknown", "Unknown"
+		else:
+			beta_texid, unit_title = queries.search_philobiblon(lien_philobiblon, cnum=beta_cnum)
 	else:
 		beta_texid, unit_title = "Unknown", "Unknown"
 

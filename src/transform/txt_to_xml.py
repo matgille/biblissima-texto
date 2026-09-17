@@ -1,5 +1,5 @@
 import copy
-
+import unidecode
 import lxml.etree as ET
 import re
 
@@ -457,15 +457,34 @@ def inject_metadata(metadata, structured_text):
 	cote = identifier.xpath("idno[@type='cote']")[0]
 	cote.text = metadata["cote"]
 
+
+	# Profile desc
+	profileDesc = model_as_tree.xpath("descendant::profileDesc")[0]
 	# La langue utilisée.
 	langues = metadata["langues"]
-	langUsage = model_as_tree.xpath("//langUsage")[0]
+	langUsage = profileDesc.xpath("descendant::langUsage")[0]
 	child = langUsage.xpath("language")[0]
 	langUsage.remove(child)
 	for lang in langues:
 		language = ET.SubElement(langUsage, "language")
 		language.text = lang
 		language.set("ident", lang)
+
+	# Catégorie formelle; matière textuelle
+	catRef = profileDesc.xpath("descendant::catRef")[0]
+	# On commence par la forme
+	forme = metadata['type_textuel']
+	if forme == "prosa":
+		forme = "#prose"
+	else:
+		forme = "#vers"
+
+	matieres = [metadata[f"matiere_{str(n)}"] for n in range(1, 5)]
+	# On va enlever
+	matieres = " ".join([f"#{unidecode.unidecode(item)}" for item in matieres if item])
+	catRef.set("target", f"{forme} {matieres}")
+
+
 
 	# msContent
 	msContent = msDesc.xpath("msContents")[0]
@@ -489,6 +508,7 @@ def inject_metadata(metadata, structured_text):
 			cnum_factgrid.set("corresp", f"{factgrid_endpoint}entity/{metadata['factgrid_cnum']}")
 
 
+
 	# On injecte le texte pré-structuré dans le body
 	text = model_as_tree.xpath("//body", namespaces=tei_ns)[0]
 	p = text.xpath("p", namespaces=tei_ns)[0]
@@ -496,30 +516,74 @@ def inject_metadata(metadata, structured_text):
 	text.append(structured_text)
 	root = model_as_tree.getroot()
 	root.tag = ET.QName(root).localname
-	print(metadata)
 	return model_as_tree
 
+def tronquer(root, borne1, borne2):
+	# positions en ordre document
+	pos = {el: i for i, el in enumerate(root.iter())}
+	if pos[borne1] > pos[borne2]:
+		borne1, borne2 = borne2, borne1
+
+	# éléments à préserver quoi qu'il arrive :
+	proteges = set(borne1.iter())      # borne1 + toute sa descendance
+	proteges |= set(borne2.iter())     # borne2 + toute sa descendance
+	p = borne1.getparent()
+	while p is not None:               # ancêtres de borne1
+		proteges.add(p)                # (couvre aussi les ancêtres communs)
+		p = p.getparent()
+
+	for el in list(root.iter()):
+		if el in proteges:
+			continue
+		if pos[el] < pos[borne1] or pos[el] > pos[borne2]:
+			parent = el.getparent()
+			if parent is not None:
+				parent.remove(el)
+	return root
 
 
+def keep_only_given_work(tree, ident):
+	body = tree.xpath("//body/div/p")[0]
+	all_notes = body.xpath("descendant::RMK[contains(., 'HSMS-')]")
+	target_note = next((idx, note) for idx, note in enumerate(all_notes) if ident in note.text)
+	if len(all_notes) == 1:
+		return tree
+	print(all_notes)
 
+	# Si on est le dernier noeud
+	if target_note[0] + 1 == len(all_notes):
+		rmk_subelement = ET.Element("RMK-END")
+		body.append(rmk_subelement)
+		replaced_body =  tronquer(body, borne1=target_note[1], borne2=rmk_subelement)
+		rmk_subelement = replaced_body.xpath("descendant::RMK-END")[0]
+		rmk_subelement.getparent().remove(rmk_subelement)
+	else:
+		replaced_body =  tronquer(body, borne1=target_note[1], borne2=all_notes[target_note[0] + 1])
+	body.getparent().replace(body, replaced_body)
+	return tree
 
-def convert_to_xml(text, orig_text, md):
-	idx = md["file_id_hsms"]
+def convert_to_xml(text, orig_text, md, keep_only_work=False, save_as_codex=False):
+	work_id = md["oeuvre_id"]
 	TEI_NS = "http://www.tei-c.org/ns/1.0"
-	NSMAP = {None: TEI_NS}
 	first_div = ET.Element(f"div")
 	try:
 		childDiv = ET.fromstring(f"<p>{text}</p>")
 		first_div.append(childDiv)
 		first_div = treat_initial(first_div)
 		tei_file = inject_metadata(md, first_div)
+		if keep_only_work is True:
+			tei_file = keep_only_given_work(tei_file, work_id)
 	except ET.XMLSyntaxError as e:
-		print(f"Erreur de syntaxe: {e}. Check text_{idx}")
-		with open(f"test_data/output/text_{idx}.txt", "w") as output_file:
+		print(f"Erreur de syntaxe: {e}. Check text_{work_id}")
+		exit(0)
+		with open(f"test_data/output/text_{work_id}.txt", "w") as output_file:
 			output_file.write(text)
-		with open(f"test_data/output/orig_text_{idx}.txt", "w") as output_file:
+		with open(f"test_data/output/orig_text_{work_id}.txt", "w") as output_file:
 			output_file.write(orig_text)
 		exit()
-	with open(f"test_data/xml/text_{idx}.xml", "w") as output_xml:
+	if save_as_codex is True:
+		work_id = "-".join(work_id.split("-")[:-1])
+	print(f"Writing test_data/xml/text_{work_id}.xml")
+	with open(f"test_data/xml/text_{work_id}.xml", "w") as output_xml:
 		output_xml.write(ET.tostring(tei_file, pretty_print=False).decode())
 

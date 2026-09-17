@@ -40,6 +40,10 @@
                     </fileDesc>
                 </teiHeader>
                 <xsl:for-each select="collection(concat($dir, '/xml?*.xml'))">
+                    <xsl:sort data-type="number"
+                        select="number(replace(base-uri(), '^.*?HSMS-(\d+)-?(\d*)\.xml$', '$1'))"/>
+                    <xsl:sort data-type="number"
+                        select="number(replace(base-uri(), '^.*?HSMS-(\d+)-(\d+)\.xml$', '$2'))"/>
                     <xsl:variable name="outname">
                         <xsl:value-of
                             select="concat($dir, '/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
