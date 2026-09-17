@@ -20,22 +20,27 @@ def retrieve_msContents(identifier):
         identifier = str(round(identifier))
 
     query = f"""
-SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit ?unit_incipit ?unit_explicit ?title WHERE {{
+SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit
+       ?unit_incipit ?unit_explicit ?title WHERE {{
   ?cnum wdt:P476 "BETA cnum {identifier}" .
+
   OPTIONAL {{
     ?cnum p:P543 ?stmt .
     ?stmt ps:P543 ?segmentation .
     OPTIONAL {{ ?stmt pq:P70  ?incipit . }}
     OPTIONAL {{ ?stmt pq:P602 ?explicit . }}
-    
   }}
+
   OPTIONAL {{
-            ?cnum wdt:P590 ?work .          # 1er saut : cnum -> œuvre (texid)
-            OPTIONAL {{ ?work wdt:P11 ?title . }}   # 2e saut : titre de l'œuvre
-            ?work ps:P543 ?segmentation .
-                OPTIONAL {{ ?work pq:P70  ?unit_incipit . }}
-                OPTIONAL {{ ?work pq:P602 ?unit_explicit . }}
-          }}
+    ?cnum wdt:P590 ?work .
+    OPTIONAL {{ ?work wdt:P11 ?title . }}
+    OPTIONAL {{
+      ?work p:P543 ?wstmt .
+      OPTIONAL {{ ?wstmt pq:P70  ?unit_incipit . }}
+      OPTIONAL {{ ?wstmt pq:P602 ?unit_explicit . }}
+    }}
+  }}
+
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
 }}
 """

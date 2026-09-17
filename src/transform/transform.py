@@ -19,13 +19,27 @@ def create_multiple_msItem(codex_ident):
 	"""
 
 	df_oeuvres = utils.import_table_as_dataframe(path="databases/tabla-obras.csv", sep="\t")
+	df_codices = utils.import_table_as_dataframe(path="databases/tabla-codices.csv", sep="\t")
 
 	oeuvre_filtree_codex = df_oeuvres[df_oeuvres["HSMS ID"] == codex_ident]
+	codex_filtre = df_codices[df_codices["HSMS ID"] == codex_ident]
 
 	factgrid_endpoint = "https://database.factgrid.de/"
 	msContents = ET.Element("msContents")
+	origin = ET.Element("origin")
 
 	for idx, work in oeuvre_filtree_codex.iterrows():
+
+		# Informations historiques
+
+		origDate = ET.Element("origDate")
+
+		date_debut = codex_filtre["SPDT-inicio"].values[0]
+		date_fin = codex_filtre["SPDT-fin"].values[0]
+		origDate = utils.process_date(origDate, date_debut, date_fin)
+		origin.append(origDate)
+
+		# Information de texte
 		beta_cnum_val = work["BETA cnum"]
 		work_id = work["Obra ID"]
 		disable_queries = False
@@ -58,7 +72,7 @@ def create_multiple_msItem(codex_ident):
 			cnum_factgrid.text = factgrid_cnum_val
 			cnum_factgrid.set("corresp", f"{factgrid_endpoint}entity/{factgrid_cnum_val}")
 	print(ET.tostring(msContents, pretty_print=True).decode())
-	return msContents
+	return msContents, origin
 
 
 
@@ -86,14 +100,14 @@ def work_loop(files):
 			print(f"Poésie ou lettre identifiée sur {work_id}")
 			number = int(re.search(regexp_multiple_works, work_id).group(1))
 			if number == 1:
-				updated_msContents = create_multiple_msItem(md["HSMS_ident"])
+				updated_msContents, updated_origin = create_multiple_msItem(md["HSMS_ident"])
 			else:
 				continue
 			# Sur la poésie, on ne va pas diviser les oeuvres. On ne convertit donc uniquement la première oeuvre.
-			conversion.convert_to_xml(xml_text, orig_text, msContents=updated_msContents, md=md, keep_only_work=False, save_as_codex=True)
+			conversion.convert_to_xml(xml_text, orig_text, msContents=updated_msContents, origin=updated_origin, md=md, keep_only_work=False, save_as_codex=True)
 			print("Cas 2")
 		else:
-			conversion.convert_to_xml(xml_text, orig_text, msContents=None, md=md, keep_only_work=True)
+			conversion.convert_to_xml(xml_text, orig_text, msContents=None, origin=None, md=md, keep_only_work=True)
 		n += 1
 		if idx > 50:
 			break

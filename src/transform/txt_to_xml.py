@@ -370,6 +370,7 @@ def inject_metadata(metadata, structured_text):
 		# On corrige l'analyse du msDesc
 		msDesc.set("ana", "#frbr.manifestation_singleton")
 
+		origDate.set("corresp", f"#{metadata['oeuvre_id']}")
 		parent = origDate.getparent()
 		index = parent.index(origDate)
 		parent.remove(origDate)
@@ -490,6 +491,7 @@ def inject_metadata(metadata, structured_text):
 	msContent = msDesc.xpath("msContents")[0]
 	msItem = msContent.xpath("msItem")
 	for item in msItem:
+		item.set("{http://www.w3.org/XML/1998/namespace}id", metadata['oeuvre_id'])
 		locus = item.xpath("locus")[0]
 		locus.text = metadata['emplacement_oeuvre']
 		incipit = item.xpath("incipit")[0]
@@ -567,7 +569,16 @@ def replace_msContents(tree, node_to_update):
 	msContent.getparent().replace(msContent, node_to_update)
 	return tree
 
-def convert_to_xml(text, orig_text, msContents, md, keep_only_work=False, save_as_codex=False):
+
+def replace_origin(tree, node_to_update):
+	try:
+		origin = tree.xpath("descendant::origin")[0]
+	except IndexError:
+		return tree
+	origin.getparent().replace(origin, node_to_update)
+	return tree
+
+def convert_to_xml(text, orig_text, msContents, origin, md, keep_only_work=False, save_as_codex=False):
 	work_id = md["oeuvre_id"]
 	TEI_NS = "http://www.tei-c.org/ns/1.0"
 	first_div = ET.Element(f"div")
@@ -578,6 +589,8 @@ def convert_to_xml(text, orig_text, msContents, md, keep_only_work=False, save_a
 		tei_file = inject_metadata(md, first_div)
 		if msContents:
 			tei_file = replace_msContents(tei_file, msContents)
+		if origin:
+			tei_file = replace_origin(tei_file, origin)
 		if keep_only_work is True:
 			tei_file = keep_only_given_work(tei_file, work_id)
 	except ET.XMLSyntaxError as e:
