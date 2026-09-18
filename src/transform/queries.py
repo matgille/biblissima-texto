@@ -20,15 +20,16 @@ def retrieve_msContents(identifier):
         identifier = str(round(identifier))
 
     query = f"""
-SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit
-       ?unit_incipit ?unit_explicit ?title WHERE {{
+SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?classe ?classeLabel
+       ?unit_incipit ?unit_explicit ?title ?work_id ?work_incipit ?work_explicit WHERE {{
   ?cnum wdt:P476 "BETA cnum {identifier}" .
 
   OPTIONAL {{
     ?cnum p:P543 ?stmt .
     ?stmt ps:P543 ?segmentation .
-    OPTIONAL {{ ?stmt pq:P70  ?incipit . }}
-    OPTIONAL {{ ?stmt pq:P602 ?explicit . }}
+    OPTIONAL {{ ?stmt pq:P70  ?unit_incipit . }}
+    OPTIONAL {{ ?stmt pq:P602 ?unit_explicit . }}
+    OPTIONAL {{ ?segmentation wdt:P2 ?classe . }}      # classe du segment (rubric/main text/colophon)
   }}
 
   OPTIONAL {{
@@ -36,12 +37,16 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit
     OPTIONAL {{ ?work wdt:P11 ?title . }}
     OPTIONAL {{
       ?work p:P543 ?wstmt .
-      OPTIONAL {{ ?wstmt pq:P70  ?unit_incipit . }}
-      OPTIONAL {{ ?wstmt pq:P602 ?unit_explicit . }}
+      ?wstmt ps:P543 ?wseg .                       
+      OPTIONAL {{ ?wstmt pq:P70  ?work_incipit . }}
+      OPTIONAL {{ ?wstmt pq:P602 ?work_explicit . }}
+      OPTIONAL {{ ?wstmt pq:P602 ?work_colophon . }}
     }}
+    OPTIONAL {{ ?work wdt:P476 ?work_philo_id . }}
   }}
 
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
+  BIND(REPLACE(STR(?work), "https://database.factgrid.de/entity/", "") AS ?work_id)
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es, en". }}
 }}
 """
     r = requests.get(
@@ -56,13 +61,37 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit
 
     data = r.json()
     try:
-        unit_incipit = data['results']['bindings'][0]['unit_incipit']['value']
-    except (KeyError, IndexError):
-        unit_incipit = None
+        colophon = next(item['unit_incipit']['value']
+                            for item in data['results']['bindings']
+                            if item["segmentationLabel"]["value"] == "Colofón")
+    except (KeyError, IndexError, StopIteration):
+        colophon = None
     try:
-        unit_explicit = data['results']['bindings'][0]['unit_explicit']['value']
+        work_id = data['results']['bindings'][0]['work_id']['value']
     except (KeyError, IndexError):
-        unit_explicit = None
+        work_id = None
+    try:
+        unit_incipit = next(item['unit_incipit']['value']
+                            for item in data['results']['bindings']
+                            if item["segmentationLabel"]["value"] == "Texto principal")
+    except (KeyError, IndexError, StopIteration):
+        try:
+            unit_incipit = next(item['work_incipit']['value']
+                                for item in data['results']['bindings']
+                                if item["wsegLabel"]["value"] == "Texto principal")
+        except (KeyError, IndexError, StopIteration):
+            unit_incipit = None
+    try:
+        unit_explicit = next(item['unit_explicit']['value']
+                            for item in data['results']['bindings']
+                            if item["segmentationLabel"]["value"] == "Texto principal")
+    except (KeyError, IndexError, StopIteration):
+        try:
+            unit_explicit = next(item['work_explicit']['value']
+                                for item in data['results']['bindings']
+                                if item["wsegLabel"]["value"] == "Texto principal")
+        except (KeyError, IndexError, StopIteration):
+            unit_explicit = None
     try:
         unit_title = data['results']['bindings'][0]['title']['value']
     except (KeyError, IndexError):
@@ -71,25 +100,8 @@ SELECT ?cnum ?cnumLabel ?segmentationLabel ?incipit ?explicit
         factgrid_cnum_id = data['results']['bindings'][0]['cnum']['value'].split("/")[-1]
     except (KeyError, IndexError):
         factgrid_cnum_id = None
-    try:
-        incipit = data['results']['bindings'][0]['incipit']['value']
-    except (IndexError, KeyError):
-        incipit = "Unknown"
-    try:
-        explicit = data['results']['bindings'][-1]['explicit']['value']
-    except KeyError:
-        try:
-            explicit = data['results']['bindings'][-1]['incipit']['value']
-        except KeyError:
-            explicit = "Unknown"
-    except IndexError:
-        explicit = "Unknown"
 
-    # Des fois on n'a que l'incipit.
-    if incipit == explicit and len(data['results']['bindings']) == 1:
-        explicit = "Unknown"
-
-    return incipit, explicit, factgrid_cnum_id, unit_title, unit_incipit, unit_explicit
+    return factgrid_cnum_id, work_id, unit_title, unit_incipit, unit_explicit, colophon
 
 
 def search_factgrid_beta_id(identifier, type_identifier):
@@ -101,24 +113,21 @@ def search_factgrid_beta_id(identifier, type_identifier):
     print(philo_id)
 
     query = f"""
-SELECT ?ms ?msLabel ?philoId ?typeLabel
-       ?institution ?institutionId ?institutionLabel ?institutionPhiloId
-       ?date ?langueLabel ?supportLabel ?folios ?numerisation
+SELECT ?ms ?philoId
+       ?institution ?institutionId ?institutionPhiloId
+       ?msName
+       (GROUP_CONCAT(DISTINCT ?typeLabel; separator=" | ") AS ?types)
 WHERE {{
   ?ms wdt:P476 "{philo_id}" .
-  BIND("{philo_id}" AS ?philoId)
+  BIND("BETA manid 2874" AS ?philoId)
   OPTIONAL {{ ?ms wdt:P2 ?type . }}
   OPTIONAL {{ ?ms wdt:P329 ?institution . }}
   OPTIONAL {{ ?institution wdt:P476 ?institutionPhiloId . }}
-  OPTIONAL {{ ?ms wdt:P95  ?origine . }}
-  OPTIONAL {{ ?ms wdt:P106 ?date . }}
-  OPTIONAL {{ ?ms wdt:P18  ?langue . }}
-  OPTIONAL {{ ?ms wdt:P480 ?support . }}
-  OPTIONAL {{ ?ms wdt:P107 ?folios . }}
-  OPTIONAL {{ ?ms wdt:P138 ?numerisation . }}
+  OPTIONAL {{ ?ms rdfs:label ?msName . FILTER(LANG(?msName) = "es") }}
   BIND(REPLACE(STR(?institution), "https://database.factgrid.de/entity/", "") AS ?institutionId)
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
 }}
+GROUP BY ?ms ?philoId ?institution ?institutionId ?institutionPhiloId ?msName
 """
     r = requests.get(
         SPARQL_ENDPOINT,
@@ -131,31 +140,27 @@ WHERE {{
     )
 
     data = r.json()
-    cols = data["head"]["vars"]
-    reordered = [
-        {c: b.get(c, {}).get("value") for c in cols}
-        for b in data["results"]["bindings"]
-    ]
-    libraries_id = {}
-    # On a plusieurs résultats car on a trois identifiants de bibliothèque différents: BETA, BITECA, BITAGAP
-    if reordered:
-        for item in reordered:
-            ms = item['ms']
-            institution = item['institution']
-            current_philoidtype = item['institutionPhiloId'].split()[0]
-            libraries_id[current_philoidtype] = item['institutionPhiloId'].split()[-1]
-        return libraries_id, ms, institution
+    try:
+        results = data["results"]["bindings"][0]
+    except (IndexError, KeyError):
+        results = None
+    if results:
+        ms = results['ms']["value"]
+        institution = results['institution']["value"]
+        msName = results['msName']["value"]
+        libraries_id = results['institutionPhiloId']["value"]
+        return libraries_id, ms, institution, msName
     else:
         return None
 
 def search_philobiblon(url, cnum):
     """
-    Cette fonction cherche dans l'ancienne version de philobiblon (on ne peut pas requêter la nouvelle avec GET) le titre du témoin dans le mss.
+    Cette fonction cherche dans l'ancienne version de philobiblon le titre du témoin dans le mss.
     :param url:
     :param cnum:
     :return:
     """
-    print(f"Searching for {url} and cnum {cnum}")
+    # print(f"Searching for {url} and cnum {cnum}")
     response = requests.get(url)
     response.raise_for_status()
     tree = html.fromstring(response.content)
@@ -175,7 +180,7 @@ def search_philobiblon(url, cnum):
     if not td_texid:
         return "Unknown", "Unknown"
 
-    if td_cnum:
+    if td_cnum is not None:
         td_title = td_cnum.xpath(
             "following::td[contains(normalize-space(.), 'Title(s) in witness')][1]/following::td"
         )

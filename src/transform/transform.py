@@ -12,6 +12,7 @@ import sys
 import lxml.etree as ET
 import pandas as pd
 
+
 def create_multiple_msItem(codex_ident):
 	"""
 	Récupère toutes les métadonnées pour les oeuvres à plusieurs unités (lettres, poésie, glose)
@@ -45,22 +46,31 @@ def create_multiple_msItem(codex_ident):
 		disable_queries = False
 		if not pd.isna(beta_cnum_val):
 			if disable_queries is True:
-				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, unit_incipit, unit_explicit = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title = "Unknown", "Unknown", "Unknown", "Unknown"
 			else:
-				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, unit_incipit, unit_explicit = queries.retrieve_msContents(
+				(
+
+					factgrid_cnum_val,
+					factgrid_word_id,
+					unit_title,
+					incipit_unit,
+					explicit_unit,
+					colophon
+				) = queries.retrieve_msContents(
 					identifier=beta_cnum_val)
 		else:
-			incipit_unit, explicit_unit, factgrid_cnum_val, unit_incipit, unit_explicit = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
-
+			incipit_unit, explicit_unit, factgrid_cnum_val = "Unknown", "Unknown", "Unknown"
 
 		item = ET.SubElement(msContents, "msItem")
 		item.set("{http://www.w3.org/XML/1998/namespace}id", work_id)
 		locus = ET.SubElement(item, "locus")
 		locus.text = work["folio"]
+		colophon_element = ET.SubElement(item, "colophon")
+		colophon_element.text = colophon
 		incipit = ET.SubElement(item, "incipit")
-		incipit.text = unit_incipit
+		incipit.text = incipit_unit
 		explicit = ET.SubElement(item, "explicit")
-		explicit.text = unit_explicit
+		explicit.text = explicit_unit
 		if not pd.isna(beta_cnum_val) and beta_cnum_val:
 			title = ET.SubElement(item, "title")
 			title.text = unit_title
@@ -68,52 +78,79 @@ def create_multiple_msItem(codex_ident):
 			beta_cnum.set("type", "beta-cnum")
 			beta_cnum.text = str(int(beta_cnum_val))
 			cnum_factgrid = ET.SubElement(item, "idno")
-			beta_cnum.set("type", "factgrid-cnum")
+			beta_cnum.set("type", "beta-cnum")
 			cnum_factgrid.text = factgrid_cnum_val
+			cnum_factgrid.set("type", "factgrid-cnum")
 			cnum_factgrid.set("corresp", f"{factgrid_endpoint}entity/{factgrid_cnum_val}")
-	print(ET.tostring(msContents, pretty_print=True).decode())
 	return msContents, origin
 
-
-
+# TODO: manuscrits composites avec ordre altéré (0089: fin du Libro de Alexandre après intercalation d'un autre item)
 def work_loop(files):
 	name_parser = pipeline("ner", model="ele-sage/distilbert-base-uncased-name-splitter",
 						   aggregation_strategy="simple")
 	df_oeuvres = utils.import_table_as_dataframe(path="databases/tabla-obras.csv", sep="\t")
 	n = 0
 	splits_exceptions = ["HSMS-0037"]
+	skip_metadata_retrieval = False
+	previous_work = None
 	for idx, work in df_oeuvres.iterrows():
-		filename = work['Abreviatura HSMS']
+		if work['HSMS ID'] != "HSMS-0089":
+			continue
+		# On vérifie que le manuscrit contient plusieurs oeuvres
+		n += 1
+		print(n)
+		# if idx < 50:
+		# 	continue
+		if n < -1 or n > 200:
+			continue
+		print(f"Current hsms id: {work['HSMS ID']}. Previous work: {previous_work}")
+		if skip_metadata_retrieval is True and previous_work == work['HSMS ID']:
+			print("Passing")
+			continue
+		else:
+			skip_metadata_retrieval = False
+		previous_work = work['HSMS ID']
 		work_id = work["Obra ID"]
+		mss_id = "-".join(work_id.split("-")[:-1])
+		contains_multiple_works = len(df_oeuvres[df_oeuvres['HSMS ID'].str.contains(mss_id)]) > 1
+
+
+		filename = work['Abreviatura HSMS']
 		corresponding_file = next(file for file in files if filename in file)
 		file_as_list = utils.read_to_lines(corresponding_file)
 		regexp_multiple_works = re.compile(r"HSMS-\d{4}-(\d{4})")
-		md = metadata.retrieve_metadata(file_as_list, name_parser, work_id=work_id, disable_queries=True)
+		print(f"Metadata_retrieval {n}")
+		md = metadata.retrieve_metadata(file_as_list, name_parser, work_id=work_id, disable_queries=False)
 		orig_text = "\n".join(file_as_list[6:])
+
+
 
 		# On splitte après la transformation en xml-tei, c'est beaucoup plus simple.
 		xml_text = conversion.convert(orig_text, id=work_id)
 		print(md["file_id_hsms"])
 		print(md["oeuvre_id"])
 		matieres = [md[f"matiere_{str(n)}"] for n in range(1, 5)]
-		if md['type_textuel'] != "prosa" or "carta" in matieres or md["HSMS_ident"] in splits_exceptions:
-			print(f"Poésie ou lettre identifiée sur {work_id}")
-			number = int(re.search(regexp_multiple_works, work_id).group(1))
+
+		# Dans le cas où on a un recueil de poésie ou de lettres
+		number = int(re.search(regexp_multiple_works, work_id).group(1))
+		if number == 1 and contains_multiple_works is True and (md['type_textuel'] != "prosa" or "carta" in matieres or md["HSMS_ident"] in splits_exceptions):
+			print(f"Recueil de textes poétiques ou lettre identifiée sur {work_id}")
 			if number == 1:
+				# Dans ces cas là on va avoir plusieurs msItems qu'on va pouvoir renseigner
 				updated_msContents, updated_origin = create_multiple_msItem(md["HSMS_ident"])
+				skip_metadata_retrieval = True
 			else:
 				continue
 			# Sur la poésie, on ne va pas diviser les oeuvres. On ne convertit donc uniquement la première oeuvre.
-			conversion.convert_to_xml(xml_text, orig_text, msContents=updated_msContents, origin=updated_origin, md=md, keep_only_work=False, save_as_codex=True)
-			print("Cas 2")
+			conversion.convert_to_xml(xml_text, orig_text, msContents=updated_msContents, origin=updated_origin, md=md,
+									  keep_only_work=False, save_as_codex=True)
 		else:
 			conversion.convert_to_xml(xml_text, orig_text, msContents=None, origin=None, md=md, keep_only_work=True)
-		n += 1
-		if idx > 50:
-			break
-	print(n)
+			skip_metadata_retrieval = False
 
-def main(files:str) -> None:
+
+
+def main(files: str) -> None:
 	"""
 	Fonction principale de transformation de textes XML-TEI
 	:param files: la liste de fichiers à traiter.

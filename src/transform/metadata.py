@@ -146,7 +146,7 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 
 
 	langues = oeuvre_filtree["lengua 1"].values[0], oeuvre_filtree["lengua 2"].values[0]
-	dict_langues = {"castellano": "castillan",
+	dict_langues = {"castellano": "spo",
 				   "aragonés": "aragonais",
 				   "latín": "latin",
 				   "gallego": "galicien",
@@ -167,26 +167,26 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 
 	if beta_copid:
 		if disable_queries:
-			request = "Unknown", "Unknown", "Unknown"
+			request = "Unknown", "Unknown", "Unknown", "Unknown"
 		else:
 			request = queries.search_factgrid_beta_id(identifier=beta_copid, type_identifier="copid")
 	elif beta_manid:
 		if disable_queries:
-			request = "Unknown", "Unknown", "Unknown"
+			request = "Unknown", "Unknown", "Unknown", "Unknown"
 		else:
 			request = queries.search_factgrid_beta_id(identifier=beta_manid, type_identifier="manid")
 	else:
 		request = None
 	if request:
-		libraries_id, factgrid_mss_id, institution_id = request
+		libraries_id, factgrid_mss_id, institution_id, msName = request
 	else:
-		libraries_id, factgrid_mss_id, institution_id = "Unknown", "Unknown", "Unknown"
+		libraries_id, factgrid_mss_id, institution_id, msName = "Unknown", "Unknown", "Unknown", "Unknown"
 
 	if not pd.isna(beta_cnum):
 		if disable_queries is True:
 			incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
 		else:
-			incipit_unit, explicit_unit, factgrid_cnum, _, _, _ = queries.retrieve_msContents(identifier=beta_cnum)
+			factgrid_cnum, factgrid_work_id, unit_title, incipit_unit, explicit_unit, colophon = queries.retrieve_msContents(identifier=beta_cnum)
 	else:
 		incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
 
@@ -221,6 +221,7 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		"emplacement_oeuvre": emplacement_oeuvre,
 		"titre": titre,
 		"titre_unite_codico": unit_title,
+		"msName": msName,
 		"traducteur_parse": traducteur_parse,
 		"transcripteur_parse": transcripteur_parse,
 		"auteur_parse": auteur_parse,
@@ -228,10 +229,12 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		"lien_philobiblon": lien_philobiblon,
 		"identifiant_philobiblon_bibliotheques": libraries_id,
 		"factgrid_mss_id": factgrid_mss_id,
+		"factgrid_work_id": factgrid_work_id,
 		"factgrid_institution_id": institution_id,
 		"factgrid_cnum": factgrid_cnum,
 		"incipit_unit": incipit_unit,
 		"explicit_unit": explicit_unit,
+		"colophon": colophon,
 		"beta_texid": beta_texid,
 		"bibliotheque_conservation": bibliotheque_conservation,
 		"cote": cote,

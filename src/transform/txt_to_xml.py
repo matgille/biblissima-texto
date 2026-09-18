@@ -277,6 +277,10 @@ def inject_metadata(metadata, structured_text):
 	## L'oeuvre
 	sourceDesc = model_as_tree.xpath("//sourceDesc", namespaces=tei_ns)[0]
 	oeuvre = sourceDesc.xpath("bibl[@type='work']", namespaces=tei_ns)[0]
+	if metadata["factgrid_work_id"]:
+		factgrid_idno_work = oeuvre.xpath("idno[@type='factgrid-id']")[0]
+		factgrid_idno_work.text = metadata["factgrid_work_id"]
+		factgrid_idno_work.set("corresp", factgrid_endpoint + metadata["factgrid_work_id"])
 
 	## Auteur
 	auteur = oeuvre.xpath("author", namespaces=tei_ns)[0]
@@ -293,30 +297,30 @@ def inject_metadata(metadata, structured_text):
 		oeuvre.insert(1, auteur)
 
 	# le titre
-	title = oeuvre.xpath("title")[0]
-	title.text = metadata['titre']
+	title_oeuvre = oeuvre.xpath("title")[0]
+	title_oeuvre.text = metadata['titre']
 
 	# Date de l'oeuvre
-	date = oeuvre.xpath("date")[0]
+	date_work = oeuvre.xpath("date")[0]
 	date_debut = metadata['debut_production_oeuvre']
 	date_fin = metadata['fin_production_oeuvre']
-	parent = date.getparent()
-	index = parent.index(date)
-	parent.remove(date)
-	parent.insert(index, utils.process_date(date, date_debut, date_fin))
+	parent = date_work.getparent()
+	index = parent.index(date_work)
+	parent.remove(date_work)
+	parent.insert(index, utils.process_date(date_work, date_debut, date_fin))
 
 
 	# Identifiants
 	## HSMS-WORK
-	hsms_work = oeuvre.xpath("idno[@type='HSMS-WORK']")[0]
-	hsms_work.text = metadata['oeuvre_id']
+	hsms_work_oeuvre = oeuvre.xpath("idno[@type='HSMS-WORK']")[0]
+	hsms_work_oeuvre.text = metadata['oeuvre_id']
 
 	## BETA texid
 	try:
-		hsms_work = oeuvre.xpath("idno[@type='beta-texid']")[0]
-		hsms_work.text = metadata['beta_texid']
+		idno_texid_oeuvre = oeuvre.xpath("idno[@type='beta-texid']")[0]
+		idno_texid_oeuvre.text = metadata['beta_texid']
 	except KeyError:
-		hsms_work.text = "TODO"
+		idno_texid_oeuvre.text = "TODO"
 
 		## biblissima ID
 		try:
@@ -353,6 +357,10 @@ def inject_metadata(metadata, structured_text):
 	# On gère les informations en fonction du support de l'écriture
 	format = metadata['format']
 	msDesc = sourceDesc.xpath("msDesc")[0]
+
+	# Le nom du manuscrit
+	msName = msDesc.xpath("descendant::msName")[0]
+	msName.text = metadata['msName']
 	TEI = model_as_tree.getroot()
 
 	# History
@@ -395,6 +403,39 @@ def inject_metadata(metadata, structured_text):
 	# Gestion de la traduction
 	translation_bibl = sourceDesc.xpath("bibl[@type='translation']")[0]
 	if metadata['traducteur_parse']:
+		# Identifiants
+		hsms_work_traduction = translation_bibl.xpath("idno[@type='HSMS-WORK']")[0]
+		hsms_work_traduction.text = metadata['oeuvre_id']
+		hsms_work_oeuvre.text =  ""
+		if metadata["factgrid_work_id"]:
+			factgrid_work_id_traduction = translation_bibl.xpath("idno[@type='factgrid-id']")[0]
+			factgrid_work_id_traduction.text = metadata["factgrid_work_id"]
+			factgrid_work_id_traduction.set("corresp", factgrid_endpoint + metadata["factgrid_work_id"])
+			# On supprime l'identifiant au niveau du work.
+			factgrid_idno_work.text = ""
+			factgrid_idno_work.attrib.pop('corresp')
+
+		# Date
+		date_traduction = translation_bibl.xpath("date")[0]
+		date_work = oeuvre.xpath("date")[0]
+		date_traduction.text = date_work.text
+		date_work.text = ""
+		for name, value in date_work.attrib.items():
+			date_traduction.set(name, value)
+			date_work.attrib.pop(name)
+
+		idno_texid_traduction = translation_bibl.xpath("idno[@type='beta-texid']")[0]
+		idno_texid_traduction.text = metadata['beta_texid']
+		idno_texid_oeuvre.text = ""
+
+		hsms_work_translate = translation_bibl.xpath("idno[@type='HSMS-WORK']")[0]
+		hsms_work_translate.text = metadata['oeuvre_id']
+		# On annule l'injection précédente.
+		hsms_work_oeuvre.text = ""
+		title_translation = translation_bibl.xpath("title")[0]
+		title_translation.text = metadata["titre"]
+		# On annule l'injection précédente.
+		title_oeuvre.text = ""
 		TEI.set("type", "traduction")
 		author = translation_bibl.xpath("author")[0]
 		author.getparent().remove(author)
@@ -496,6 +537,8 @@ def inject_metadata(metadata, structured_text):
 		locus.text = metadata['emplacement_oeuvre']
 		incipit = item.xpath("incipit")[0]
 		incipit.text = metadata['incipit_unit']
+		colophon = item.xpath("colophon")[0]
+		colophon.text = metadata['colophon']
 		explicit = item.xpath("explicit")[0]
 		explicit.text = metadata['explicit_unit']
 		if not pd.isna(metadata['beta_cnum']) and metadata['beta_cnum']:
@@ -580,16 +623,15 @@ def replace_origin(tree, node_to_update):
 
 def convert_to_xml(text, orig_text, msContents, origin, md, keep_only_work=False, save_as_codex=False):
 	work_id = md["oeuvre_id"]
-	TEI_NS = "http://www.tei-c.org/ns/1.0"
 	first_div = ET.Element(f"div")
 	try:
 		childDiv = ET.fromstring(f"<p>{text}</p>")
 		first_div.append(childDiv)
 		first_div = treat_initial(first_div)
 		tei_file = inject_metadata(md, first_div)
-		if msContents:
+		if msContents is not None:
 			tei_file = replace_msContents(tei_file, msContents)
-		if origin:
+		if origin is not None:
 			tei_file = replace_origin(tei_file, origin)
 		if keep_only_work is True:
 			tei_file = keep_only_given_work(tei_file, work_id)
