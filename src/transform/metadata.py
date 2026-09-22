@@ -91,7 +91,7 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 	df_codex = utils.import_table_as_dataframe(path="databases/tabla-codices.csv", sep="\t")
 	df_oeuvres = df_oeuvres.replace({float('nan'): None})
 	df_codex = df_codex.replace({float('nan'): None})
-	HSMS_ident = as_list[0].replace("{RMK: ", "").replace(".}", "")
+	HSMS_ident = as_list[0].replace("{RMK: ", "").replace(".}", "").strip()
 
 	df_oeuvres["BETA cnum"] =  pd.to_numeric(df_oeuvres["BETA cnum"]).astype('Int64')
 	oeuvre_filtree = df_oeuvres[df_oeuvres["Obra ID"] == work_id]
@@ -189,11 +189,11 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 
 	if not pd.isna(beta_cnum):
 		if disable_queries is True:
-			incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id = "Unknown", "Unknown", "Unknown", "Unknown"
+			incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 		else:
-			factgrid_cnum, factgrid_work_id, unit_title, incipit_unit, explicit_unit, colophon = queries.retrieve_msContents(identifier=beta_cnum)
+			factgrid_cnum, factgrid_work_id, unit_title, incipit_unit, explicit_unit, colophon, BNFid, BNEid, VIAFid = queries.retrieve_msContents(identifier=beta_cnum)
 	else:
-		incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
+		incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id, colophon, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 
 
 
@@ -235,6 +235,9 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		"identifiant_philobiblon_bibliotheques": libraries_id,
 		"factgrid_mss_id": factgrid_mss_id,
 		"factgrid_work_id": factgrid_work_id,
+		"BNFid": BNFid,
+		"BNEid": BNEid,
+		"VIAFid": VIAFid,
 		"factgrid_institution_id": institution_id,
 		"factgrid_cnum": factgrid_cnum,
 		"incipit_unit": incipit_unit,

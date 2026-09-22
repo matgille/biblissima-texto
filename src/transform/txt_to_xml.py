@@ -282,6 +282,23 @@ def inject_metadata(metadata, structured_text):
 		factgrid_idno_work.text = metadata["factgrid_work_id"]
 		factgrid_idno_work.set("corresp", f"{factgrid_endpoint}entity/{metadata['factgrid_work_id']}")
 
+	if metadata["BNFid"]:
+		factgrid_idno_work = oeuvre.xpath("idno[@type='BNF-id']")[0]
+		factgrid_idno_work.text = metadata["BNFid"]
+		factgrid_idno_work.set("corresp", f"https://data.bnf.fr/fr/ark:/12148/cb{metadata['BNFid']}")
+
+
+	if metadata["BNEid"]:
+		factgrid_idno_work = oeuvre.xpath("idno[@type='BNE-id']")[0]
+		factgrid_idno_work.text = metadata["BNEid"]
+		factgrid_idno_work.set("corresp", f"https://datos.bne.es/obra/{metadata['BNEid']}.html")
+
+
+	if metadata["VIAFid"]:
+		factgrid_idno_work = oeuvre.xpath("idno[@type='VIAF-id']")[0]
+		factgrid_idno_work.text = metadata["VIAFid"]
+		factgrid_idno_work.set("corresp", f"https://viaf.org/en/viaf/{metadata['VIAFid']}")
+
 	## Auteur
 	auteur = oeuvre.xpath("author", namespaces=tei_ns)[0]
 	auteur.getparent().remove(auteur)

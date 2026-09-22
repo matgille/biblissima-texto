@@ -46,7 +46,7 @@ def create_multiple_msItem(codex_ident, xml_tree):
 		disable_queries = False
 		if not pd.isna(beta_cnum_val):
 			if disable_queries is True:
-				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title = "Unknown", "Unknown", "Unknown", "Unknown"
+				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, colophon, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 			else:
 				(
 
@@ -55,11 +55,14 @@ def create_multiple_msItem(codex_ident, xml_tree):
 					unit_title,
 					incipit_unit,
 					explicit_unit,
-					colophon
+					colophon,
+					BNFid,
+					BNEid,
+					VIAFid
 				) = queries.retrieve_msContents(
 					identifier=beta_cnum_val)
 		else:
-			incipit_unit, explicit_unit, factgrid_cnum_val = "Unknown", "Unknown", "Unknown"
+			incipit_unit, explicit_unit, factgrid_cnum_val, colophon, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 
 		item = ET.SubElement(msContents, "msItem")
 		item.set("{http://www.w3.org/XML/1998/namespace}id", work_id)
@@ -85,8 +88,13 @@ def create_multiple_msItem(codex_ident, xml_tree):
 		# Si on n'a pas de beta cnum, on peut récupérer le titre de l'unité grâce aux notes dans le texte
 		else:
 			print(work_id)
-			regexp = re.compile(rf"<RMK>{work_id}: ([^<]+)</RMK>")
-			titre = re.search(regexp, xml_tree).group(1)
+			regexp = re.compile(rf"<RMK>{work_id}: ([^<]+).*</RMK>")
+			try:
+				titre = re.search(regexp, xml_tree).group(1)
+			except AttributeError:
+				print(f"Error with {codex_ident}")
+				utils.write_tree(ET.fromstring(f"<p>{xml_tree}</p>"), "/home/mgl/Documents/test_xml.xml")
+				exit(0)
 			title = ET.SubElement(item, "title")
 			title.text = titre
 	return msContents, origin
@@ -101,15 +109,13 @@ def work_loop(files):
 	skip_metadata_retrieval = False
 	previous_work = None
 	for idx, work in df_oeuvres.iterrows():
-		# if work['HSMS ID'] != "HSMS-0337":
+		# if work['HSMS ID'] != "HSMS-0044":
 		# 	continue
 		# On vérifie que le manuscrit contient plusieurs oeuvres
 		n += 1
 		print(n)
-		# if idx < 50:
+		# if n < 28:
 		# 	continue
-		if n < 1960:
-			continue
 		print(f"Current hsms id: {work['HSMS ID']}. Previous work: {previous_work}")
 		if skip_metadata_retrieval is True and previous_work == work['HSMS ID']:
 			print("Passing")
@@ -120,6 +126,7 @@ def work_loop(files):
 		work_id = work["Obra ID"]
 		mss_id = "-".join(work_id.split("-")[:-1])
 		contains_multiple_works = len(df_oeuvres[df_oeuvres['HSMS ID'].str.contains(mss_id)]) > 1
+
 
 
 		filename = work['Abreviatura HSMS']
@@ -167,6 +174,8 @@ def work_loop(files):
 		else:
 			conversion.convert_to_xml(xml_text, orig_text, msContents=None, origin=None, md=md, keep_only_work=True)
 			skip_metadata_retrieval = False
+
+	print("End of loop.")
 
 
 

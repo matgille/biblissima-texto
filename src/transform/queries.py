@@ -21,7 +21,7 @@ def retrieve_msContents(identifier):
 
     query = f"""
 SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?classe ?classeLabel
-       ?unit_incipit ?unit_explicit ?title ?work_id ?work_incipit ?work_explicit WHERE {{
+       ?unit_incipit ?unit_explicit ?title ?work_id ?work_incipit ?work_explicit ?BNFid ?BNEid ?VIAFid WHERE {{
   ?cnum wdt:P476 "BETA cnum {identifier}" .
 
   OPTIONAL {{
@@ -42,6 +42,9 @@ SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?class
       OPTIONAL {{ ?wstmt pq:P602 ?work_explicit . }}
       OPTIONAL {{ ?wstmt pq:P602 ?work_colophon . }}
     }}
+    OPTIONAL {{ ?work wdt:P367 ?BNFid . }}
+    OPTIONAL {{ ?work wdt:P378 ?VIAFid . }}
+    OPTIONAL {{ ?work wdt:P652 ?BNEid . }}
     OPTIONAL {{ ?work wdt:P476 ?work_philo_id . }}
   }}
 
@@ -67,9 +70,21 @@ SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?class
     except (KeyError, IndexError, StopIteration):
         colophon = None
     try:
-        work_id = data['results']['bindings'][0]['work_id']['value']
+        facgrid_work_id = data['results']['bindings'][0]['work_id']['value']
     except (KeyError, IndexError):
-        work_id = None
+        facgrid_work_id = None
+    try:
+        BNFid = data['results']['bindings'][0]['BNFid']['value']
+    except (KeyError, IndexError):
+        BNFid = None
+    try:
+        VIAFid = data['results']['bindings'][0]['VIAFid']['value']
+    except (KeyError, IndexError):
+        VIAFid = None
+    try:
+        BNEid = data['results']['bindings'][0]['BNEid']['value']
+    except (KeyError, IndexError):
+        BNEid = None
     try:
         unit_incipit = next(item['unit_incipit']['value']
                             for item in data['results']['bindings']
@@ -101,7 +116,7 @@ SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?class
     except (KeyError, IndexError):
         factgrid_cnum_id = None
 
-    return factgrid_cnum_id, work_id, unit_title, unit_incipit, unit_explicit, colophon
+    return factgrid_cnum_id, facgrid_work_id, unit_title, unit_incipit, unit_explicit, colophon, BNFid, BNEid, VIAFid
 
 
 def search_factgrid_beta_id(identifier, type_identifier):
@@ -195,4 +210,5 @@ def search_philobiblon(url, cnum):
     regexp = re.compile("texid (\d+)")
     td_texid = td_texid[0].text_content().strip()
     texid = re.search(regexp, td_texid).group(1)
+    print(f"Texid: {texid}. Title: {title}")
     return texid, title
