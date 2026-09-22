@@ -403,6 +403,10 @@ def inject_metadata(metadata, structured_text):
 	else:
 		msDesc.set("ana", "#frbr.item")
 		biblStruct = sourceDesc.xpath("biblStruct[@ana = '#frbr.manifestation']")[0]
+		if metadata['ISTC']:
+			istc = biblStruct.xpath("monogr/idno[@type='ISTC']")[0]
+			istc.text = metadata['ISTC']
+			istc.set("corresp", f"https://data.cerl.org/istc/{metadata['ISTC']}")
 		publisher = biblStruct.xpath("monogr/imprint/publisher")[0]
 		publisher.text = metadata["producteur"]
 		pubPlace = biblStruct.xpath("monogr/imprint/pubPlace")[0]
@@ -427,7 +431,8 @@ def inject_metadata(metadata, structured_text):
 		if metadata["factgrid_work_id"]:
 			factgrid_work_id_traduction = translation_bibl.xpath("idno[@type='factgrid-id']")[0]
 			factgrid_work_id_traduction.text = metadata["factgrid_work_id"]
-			factgrid_work_id_traduction.set("corresp", factgrid_endpoint + metadata["factgrid_work_id"])
+
+			factgrid_work_id_traduction.set("corresp", f"{factgrid_endpoint}entity/{metadata['factgrid_work_id']}")
 			# On supprime l'identifiant au niveau du work.
 			factgrid_idno_work.text = ""
 			factgrid_idno_work.attrib.pop('corresp')

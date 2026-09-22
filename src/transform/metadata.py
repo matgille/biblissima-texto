@@ -167,20 +167,20 @@ def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=F
 
 	if beta_copid:
 		if disable_queries:
-			request = "Unknown", "Unknown", "Unknown", "Unknown"
+			request = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 		else:
 			request = queries.search_factgrid_beta_id(identifier=beta_copid, type_identifier="copid")
 	elif beta_manid:
 		if disable_queries:
-			request = "Unknown", "Unknown", "Unknown", "Unknown"
+			request = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 		else:
 			request = queries.search_factgrid_beta_id(identifier=beta_manid, type_identifier="manid")
 	else:
 		request = None
 	if request:
-		libraries_id, factgrid_mss_id, institution_id, msName = request
+		libraries_id, factgrid_mss_id, institution_id, msName, ISTC = request
 	else:
-		libraries_id, factgrid_mss_id, institution_id, msName = "Unknown", "Unknown", "Unknown", "Unknown"
+		libraries_id, factgrid_mss_id, institution_id, msName, ISTC = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 
 	if not pd.isna(beta_cnum):
 		if disable_queries is True:
@@ -233,6 +233,7 @@ def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=F
 		"BNFid": BNFid,
 		"BNEid": BNEid,
 		"VIAFid": VIAFid,
+		"ISTC": ISTC,
 		"factgrid_institution_id": institution_id,
 		"factgrid_cnum": factgrid_cnum,
 		"incipit_unit": incipit_unit,

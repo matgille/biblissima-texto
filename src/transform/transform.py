@@ -109,7 +109,7 @@ def work_loop(files):
 	skip_metadata_retrieval = False
 	previous_work = None
 	for idx, work in df_oeuvres.iterrows():
-		# if work['HSMS ID'] != "HSMS-0117":
+		# if work['HSMS ID'] != "HSMS-0095":
 		# 	continue
 		# On vérifie que le manuscrit contient plusieurs oeuvres
 		n += 1

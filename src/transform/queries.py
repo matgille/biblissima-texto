@@ -130,19 +130,20 @@ def search_factgrid_beta_id(identifier, type_identifier):
     query = f"""
 SELECT ?ms ?philoId
        ?institution ?institutionId ?institutionPhiloId
-       ?msName
+       ?msName ?ISTC
        (GROUP_CONCAT(DISTINCT ?typeLabel; separator=" | ") AS ?types)
 WHERE {{
   ?ms wdt:P476 "{philo_id}" .
-  BIND("BETA manid 2874" AS ?philoId)
+  BIND("{philo_id}" AS ?philoId)
   OPTIONAL {{ ?ms wdt:P2 ?type . }}
+  OPTIONAL {{ ?ms wdt:P645 ?ISTC . }}
   OPTIONAL {{ ?ms wdt:P329 ?institution . }}
   OPTIONAL {{ ?institution wdt:P476 ?institutionPhiloId . }}
   OPTIONAL {{ ?ms rdfs:label ?msName . FILTER(LANG(?msName) = "es") }}
   BIND(REPLACE(STR(?institution), "https://database.factgrid.de/entity/", "") AS ?institutionId)
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "es,en,de,fr". }}
 }}
-GROUP BY ?ms ?philoId ?institution ?institutionId ?institutionPhiloId ?msName
+GROUP BY ?ms ?philoId ?institution ?institutionId ?institutionPhiloId ?msName ?ISTC
 """
     r = requests.get(
         SPARQL_ENDPOINT,
@@ -161,10 +162,14 @@ GROUP BY ?ms ?philoId ?institution ?institutionId ?institutionPhiloId ?msName
         results = None
     if results:
         ms = results['ms']["value"]
+        try:
+            ISTC = results['ISTC']["value"]
+        except KeyError:
+            ISTC = None
         institution = results['institution']["value"]
         msName = results['msName']["value"]
         libraries_id = results['institutionPhiloId']["value"]
-        return libraries_id, ms, institution, msName
+        return libraries_id, ms, institution, msName, ISTC
     else:
         return None
 
