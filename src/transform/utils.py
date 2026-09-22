@@ -1,6 +1,6 @@
 import glob
 import pandas as pd
-
+import lxml.etree as ET
 
 
 def read_to_lines(path: str) -> list:
@@ -24,7 +24,7 @@ def import_table_as_dataframe(path: str, sep:str) -> pd.DataFrame:
 
 
 def process_date(node, date_debut, date_fin):
-	if "ca." in date_debut or "ca." in date_fin and date_debut != date_fin:
+	if "ca." in date_debut or (date_fin and "ca." in date_fin and date_debut != date_fin):
 		node.set("cert", "medium")
 		node.text = f"{date_debut} - {date_fin}"
 		node.set("atLeast", date_debut.replace("ca.", "").strip())
@@ -39,14 +39,23 @@ def process_date(node, date_debut, date_fin):
 		if "ad quem" in date_fin:
 			node.set("atMost", date_fin.replace("ad quem", "").strip())
 			node.text = node.text + f"- {date_fin}"
-	elif "ad quem" in date_fin:
+	elif date_fin and "ad quem"  in date_fin:
 		node.set("atMost", date_fin.replace("ad quem", "").strip())
 		node.text = date_fin
 		if "a quo" in date_debut:
 			node.set("atLeast", date_fin.replace("ad quem", "").strip())
 			node.text = f"{date_debut} -" + node.text
 	else:
-		node.set("atLeast", date_debut)
-		node.set("atMost", date_fin)
-		node.text = f"{date_debut} - {date_fin}"
+		node.text = ""
+		if date_debut:
+			node.set("atLeast", date_debut)
+			node.text = f"{date_debut}"
+		if date_fin:
+			node.set("atMost", date_fin)
+			node.text = f"{node.text} - {date_fin}"
 	return node
+
+
+def write_tree(tree, path):
+	with open(path, "w") as output_file:
+		output_file.write(ET.tostring(tree, pretty_print=True).decode())

@@ -280,7 +280,7 @@ def inject_metadata(metadata, structured_text):
 	if metadata["factgrid_work_id"]:
 		factgrid_idno_work = oeuvre.xpath("idno[@type='factgrid-id']")[0]
 		factgrid_idno_work.text = metadata["factgrid_work_id"]
-		factgrid_idno_work.set("corresp", factgrid_endpoint + metadata["factgrid_work_id"])
+		factgrid_idno_work.set("corresp", f"{factgrid_endpoint}entity/{metadata['factgrid_work_id']}")
 
 	## Auteur
 	auteur = oeuvre.xpath("author", namespaces=tei_ns)[0]
@@ -590,9 +590,9 @@ def tronquer(root, borne1, borne2):
 def keep_only_given_work(tree, ident):
 	body = tree.xpath("//body/div/p")[0]
 	all_notes = body.xpath("descendant::RMK[contains(., 'HSMS-')]")
-	target_note = next((idx, note) for idx, note in enumerate(all_notes) if ident in note.text)
-	if len(all_notes) == 1:
+	if len(all_notes) == 1 or len(all_notes) == 0:
 		return tree
+	target_note = next((idx, note) for idx, note in enumerate(all_notes) if ident in note.text)
 	print(all_notes)
 
 	# Si on est le dernier noeud
@@ -628,6 +628,8 @@ def convert_to_xml(text, orig_text, msContents, origin, md, keep_only_work=False
 		childDiv = ET.fromstring(f"<p>{text}</p>")
 		first_div.append(childDiv)
 		first_div = treat_initial(first_div)
+		# TODO: faire une fonction de réordonnement des lignes rubriquées
+
 		tei_file = inject_metadata(md, first_div)
 		if msContents is not None:
 			tei_file = replace_msContents(tei_file, msContents)

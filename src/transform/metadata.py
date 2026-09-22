@@ -102,8 +102,13 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		oeuvre_id = oeuvre_filtree["Obra ID"].values[0]
 	except IndexError:
 		print(f"Erreur avec le fichier {HSMS_ident}")
+		exit(0)
 		return
-	file_id_hsms = codex_filtre["Abreviatura HSMS"].values[0]
+	try:
+		file_id_hsms = codex_filtre["Abreviatura HSMS"].values[0]
+	except IndexError:
+		print(f"Error with {HSMS_ident}, file {oeuvre_id}")
+		exit(0)
 	beta_copid = oeuvre_filtree["BETA copid"].values[0]
 	beta_manid = oeuvre_filtree["BETA manid"].values[0]
 	beta_cnum = oeuvre_filtree["BETA cnum"].values[0]
@@ -184,7 +189,7 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 
 	if not pd.isna(beta_cnum):
 		if disable_queries is True:
-			incipit_unit, explicit_unit, factgrid_cnum = "Unknown", "Unknown", "Unknown"
+			incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id = "Unknown", "Unknown", "Unknown", "Unknown"
 		else:
 			factgrid_cnum, factgrid_work_id, unit_title, incipit_unit, explicit_unit, colophon = queries.retrieve_msContents(identifier=beta_cnum)
 	else:
