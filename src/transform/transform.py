@@ -109,7 +109,7 @@ def work_loop(files):
 	skip_metadata_retrieval = False
 	previous_work = None
 	for idx, work in df_oeuvres.iterrows():
-		# if work['HSMS ID'] != "HSMS-0044":
+		# if work['HSMS ID'] != "HSMS-0117":
 		# 	continue
 		# On vérifie que le manuscrit contient plusieurs oeuvres
 		n += 1
@@ -140,9 +140,7 @@ def work_loop(files):
 
 		# On splitte après la transformation en xml-tei, c'est beaucoup plus simple.
 		xml_text = conversion.convert(orig_text, id=work_id)
-		md = metadata.retrieve_metadata(file_as_list, name_parser, work_id=work_id, disable_queries=False)
-		print(md["file_id_hsms"])
-		print(md["oeuvre_id"])
+		md = metadata.retrieve_metadata(file_as_list, filename, name_parser, work_id=work_id, disable_queries=False)
 		matieres = [md[f"matiere_{str(n)}"] for n in range(1, 5)]
 
 

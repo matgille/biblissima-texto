@@ -81,7 +81,7 @@ def retrieve_names(string: str, parser, is_author=False) -> list[dict]:
 	return result
 
 
-def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> dict:
+def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=False) -> dict:
 	"""
 	Wrapper pour la récupération de metadonnées
 	:param as_list: le chemin vers le fichier
@@ -104,11 +104,6 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		print(f"Erreur avec le fichier {HSMS_ident}")
 		exit(0)
 		return
-	try:
-		file_id_hsms = codex_filtre["Abreviatura HSMS"].values[0]
-	except IndexError:
-		print(f"Error with {HSMS_ident}, file {oeuvre_id}")
-		exit(0)
 	beta_copid = oeuvre_filtree["BETA copid"].values[0]
 	beta_manid = oeuvre_filtree["BETA manid"].values[0]
 	beta_cnum = oeuvre_filtree["BETA cnum"].values[0]
@@ -249,7 +244,7 @@ def retrieve_metadata(as_list, name_parser, work_id, disable_queries=False) -> d
 		"beta_cnum": beta_cnum,
 		"beta_manid": beta_manid,
 		"beta_copid": beta_copid,
-		"file_id_hsms": file_id_hsms,
+		"file_id_hsms": filename,
 		"oeuvre_id": oeuvre_id,
 		"HSMS_ident": HSMS_ident
 	}
