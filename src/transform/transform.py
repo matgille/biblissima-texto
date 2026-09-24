@@ -46,7 +46,7 @@ def create_multiple_msItem(codex_ident, xml_tree):
 		disable_queries = False
 		if not pd.isna(beta_cnum_val):
 			if disable_queries is True:
-				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, colophon, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+				incipit_unit, explicit_unit, factgrid_cnum_val, unit_title, colophon, BNFid, BNEid, VIAFid, authorId, authorName = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 			else:
 				(
 
@@ -58,11 +58,13 @@ def create_multiple_msItem(codex_ident, xml_tree):
 					colophon,
 					BNFid,
 					BNEid,
-					VIAFid
+					VIAFid,
+					authorId,
+					authorName
 				) = queries.retrieve_msContents(
 					identifier=beta_cnum_val)
 		else:
-			incipit_unit, explicit_unit, factgrid_cnum_val, colophon, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+			incipit_unit, explicit_unit, factgrid_cnum_val, colophon, BNFid, BNEid, VIAFid, authorId, authorName = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
 
 		item = ET.SubElement(msContents, "msItem")
 		item.set("{http://www.w3.org/XML/1998/namespace}id", work_id)
@@ -100,7 +102,7 @@ def create_multiple_msItem(codex_ident, xml_tree):
 	return msContents, origin
 
 # TODO: manuscrits composites avec ordre altéré (0089: fin du Libro de Alexandre après intercalation d'un autre item)
-def work_loop(files):
+def work_loop(files, filter):
 	name_parser = pipeline("ner", model="ele-sage/distilbert-base-uncased-name-splitter",
 						   aggregation_strategy="simple")
 	df_oeuvres = utils.import_table_as_dataframe(path="databases/tabla-obras.csv", sep="\t")
@@ -109,8 +111,8 @@ def work_loop(files):
 	skip_metadata_retrieval = False
 	previous_work = None
 	for idx, work in df_oeuvres.iterrows():
-		# if work['HSMS ID'] != "HSMS-0095":
-		# 	continue
+		if work['HSMS ID'] != filter:
+			continue
 		# On vérifie que le manuscrit contient plusieurs oeuvres
 		n += 1
 		print(n)
@@ -177,7 +179,7 @@ def work_loop(files):
 
 
 
-def main(files: str) -> None:
+def main(files: str, filter) -> None:
 	"""
 	Fonction principale de transformation de textes XML-TEI
 	:param files: la liste de fichiers à traiter.
@@ -186,24 +188,11 @@ def main(files: str) -> None:
 
 	name_parser = pipeline("ner", model="ele-sage/distilbert-base-uncased-name-splitter",
 						   aggregation_strategy="simple")
-	work_loop(files)
-	exit(0)
-	for idx, file in tqdm.tqdm(enumerate(files[:51])):
-		file_as_list = utils.read_to_lines(file)
-		md = metadata.retrieve_metadata(file_as_list, name_parser)
-		if md is None:
-			continue
-		# Le texte commence à la 7e ligne
-		orig_text = "\n".join(file_as_list[6:])
-		# xml_text = conversion.convert(orig_text, id=md["file_id_hsms"])
-		xml_text = conversion.convert(orig_text, id=md["oeuvre_id"])
-		print(md["file_id_hsms"])
-		conversion.convert_to_xml(xml_text, orig_text, md)
+	work_loop(files, filter)
 
 
 if __name__ == '__main__':
 	all_files = glob.glob(f"{sys.argv[1]}/*.txt")
 	if len(sys.argv) == 3:
-		all_files = [item for item in all_files if sys.argv[2] in item]
-		print(all_files)
-	main(all_files)
+		filter = sys.argv[2]
+	main(all_files, filter)

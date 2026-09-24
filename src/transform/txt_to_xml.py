@@ -34,11 +34,20 @@ def treat_abbreviations(text_string):
 
 
 def treat_illegible_char(text_string):
-	text_string = re.sub(r'(?<!\s)\[\?\?\]', r'<gap reason="illegible" extent="subword"/>', text_string)
+	text_string = re.sub(r'(?<!\s)\[\*?\?\?\]', r'<gap reason="illegible" extent="subword"/>', text_string)
 	return text_string
 
 def treat_illegible_word(text_string):
-	text_string = re.sub(r'\s\[\?\?\]', r' <gap reason="illegible" extent="word"/>', text_string)
+	text_string = re.sub(r'\s\[\*?\?\?\]', r' <gap reason="illegible" extent="word"/>', text_string)
+	return text_string
+
+def treat_illegible_words_no_brackets(text_string):
+	text_string = re.sub(r'\?\?\?', r'<gap reason="illegible" extent="words"/>', text_string)
+	return text_string
+
+
+def treat_illegible_subword_no_brackets(text_string):
+	text_string = re.sub(r'(\S)\?\?(\S)', r'\1<gap reason="illegible" extent="subword"/>\2', text_string)
 	return text_string
 
 
@@ -79,7 +88,7 @@ def treat_complex_illegibility(text_string, debug=False):
 
 def treat_illegible_words(text_string, debug=False):
 	orig = copy.copy(text_string)
-	text_string = re.sub(r'(\s?)\[\?\?\?\]', r'\1<gap reason="illegible" extent="words"/>', text_string)
+	text_string = re.sub(r'(\s?)\[\*?\?\?\?\]', r'\1<gap reason="illegible" extent="words"/>', text_string)
 	if debug:
 		print(f"Orig: {orig}")
 		print(f"Result: {text_string}")
@@ -218,15 +227,17 @@ def identify_shifted_word_before_pb(text_string):
 
 def convert(orig_text, id="", debug: bool=False):
 	text = modify_delimiter(orig_text)
+	text = treat_particular_abbreviations(text)
 	text = treat_abbreviations(text)
 	text = treat_calderon(text)
 	text = treat_combining_characters(text)
 	text = treat_folio(text)
 	text = treat_illegible_char(text)
 	text = treat_illegible_word(text)
+	text = treat_illegible_words_no_brackets(text)
+	text = treat_illegible_subword_no_brackets(text)
 	text = treat_complex_illegibility(text)
 	text = treat_illegible_words(text, debug=debug)
-	text = treat_particular_abbreviations(text)
 	text = treat_linebreaks(text)
 	text = convert_ampersands(text)
 	text = iterxml(text, id)
@@ -261,7 +272,7 @@ def inject_metadata(metadata, structured_text):
 	# On commence par le titre
 	titleStmt = model_as_tree.xpath("//titleStmt")[0]
 	title = titleStmt.xpath("title")[0]
-	title.text = f"{metadata['titre']}: version XML-TEI"
+	title.text = f"{metadata['titre']}"
 	transcription = titleStmt.xpath("respStmt")[0]
 	for idx, transcriptor in enumerate(metadata["transcripteur_parse"]):
 		if idx == 0:
@@ -302,8 +313,10 @@ def inject_metadata(metadata, structured_text):
 	## Auteur
 	auteur = oeuvre.xpath("author", namespaces=tei_ns)[0]
 	auteur.getparent().remove(auteur)
-	for idx, author in enumerate(metadata["auteur_parse"]):
+	for idx, author in enumerate(metadata["author_name_factgrid"]):
 		auteur = ET.SubElement(oeuvre, "author")
+		if metadata["author_id_factgrid"]:
+			auteur.set("corresp", metadata["author_id_factgrid"])
 		surname = ET.SubElement(auteur, "surname")
 		surname.text = author["surname"]
 		forename = ET.SubElement(auteur, "forename")
@@ -493,7 +506,10 @@ def inject_metadata(metadata, structured_text):
 	settlement.text = lieu_conservation
 	institution = identifier.xpath("repository")[0]
 	institution.text = bibliotheque
-	institution.set("corresp", metadata['factgrid_institution_id'])
+	try:
+		institution.set("corresp", metadata['factgrid_institution_id'])
+	except TypeError:
+		pass
 
 	hsms_id = identifier.xpath("idno[@type='HSMS-ID']")[0]
 	hsms_id.text = metadata['HSMS_ident']
@@ -529,10 +545,19 @@ def inject_metadata(metadata, structured_text):
 	langUsage = profileDesc.xpath("descendant::langUsage")[0]
 	child = langUsage.xpath("language")[0]
 	langUsage.remove(child)
+	dict_langues = {"castellano": "osp-x-med",
+				   "aragonés": "arg-x-med",
+				   "latín": "lat-x-med",
+				   "gallego": "glg-x-med",
+				   "leonés": "leo-x-med",
+				   "castellano occidental": "cast-occ-x-med",
+				   "navarro": "nav-x-med",
+				   "navarro-aragonés": "nav-arg-x-med",
+				   "riojano": "rio-x-med"}
 	for lang in langues:
 		language = ET.SubElement(langUsage, "language")
 		language.text = lang
-		language.set("ident", lang)
+		language.set("ident", dict_langues[lang])
 
 	# Catégorie formelle; matière textuelle
 	catRef = profileDesc.xpath("descendant::catRef")[0]
@@ -643,6 +668,27 @@ def replace_origin(tree, node_to_update):
 	origin.getparent().replace(origin, node_to_update)
 	return tree
 
+def add_rng_schema(xml_tree, rng_schema_path):
+	"""
+	Adds a RNG schema reference to the XML document.
+
+	Args:
+		xml_tree: The XML tree to modify
+		rng_schema_path: Path to the RNG schema file
+
+	Returns:
+		The modified XML tree with schema reference
+	"""
+	# Create a new XML declaration with DOCTYPE
+	pi = ET.ProcessingInstruction(
+		"xml-model",
+		f'href="{rng_schema_path}" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"'
+	)
+	xml_tree.getroot().addprevious(pi)
+
+	# Parse the combined string back into an XML tree
+	return xml_tree
+
 def convert_to_xml(text, orig_text, msContents, origin, md, keep_only_work=False, save_as_codex=False):
 	work_id = md["oeuvre_id"]
 	first_div = ET.Element(f"div")
@@ -653,12 +699,16 @@ def convert_to_xml(text, orig_text, msContents, origin, md, keep_only_work=False
 		# TODO: faire une fonction de réordonnement des lignes rubriquées
 
 		tei_file = inject_metadata(md, first_div)
+		rng_schema_path = "/home/mgl/Bureau/Travail/projets/Biblissima-Text/Transform/schemata/out/ODD_v1.rng"  # Remplacez par le chemin réel
+		tei_file = utils.remove_unnecesary_lb_nodes(tei_file)
+
 		if msContents is not None:
 			tei_file = replace_msContents(tei_file, msContents)
 		if origin is not None:
 			tei_file = replace_origin(tei_file, origin)
 		if keep_only_work is True:
 			tei_file = keep_only_given_work(tei_file, work_id)
+
 	except ET.XMLSyntaxError as e:
 		print(f"Erreur de syntaxe: {e}. Check text_{work_id}")
 		exit(0)
@@ -670,6 +720,7 @@ def convert_to_xml(text, orig_text, msContents, origin, md, keep_only_work=False
 	if save_as_codex is True:
 		work_id = "-".join(work_id.split("-")[:-1])
 	print(f"Writing test_data/xml/text_{work_id}.xml")
+	tei_file = add_rng_schema(tei_file, rng_schema_path)
 	with open(f"test_data/xml/text_{work_id}.xml", "w") as output_xml:
 		output_xml.write(ET.tostring(tei_file, pretty_print=False).decode())
 

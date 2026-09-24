@@ -146,16 +146,7 @@ def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=F
 
 
 	langues = oeuvre_filtree["lengua 1"].values[0], oeuvre_filtree["lengua 2"].values[0]
-	dict_langues = {"castellano": "spo",
-				   "aragonés": "aragonais",
-				   "latín": "latin",
-				   "gallego": "galicien",
-				   "leonés": "léonais",
-				   "castellano occidental": "castillan occidental",
-				   "navarro": "navarrais",
-				   "navarro-aragonés": "navarrais-aragonais",
-				   "riojano": "riojan"}
-	langues = [dict_langues[langue] for langue in langues if langue]
+	langues = [langue for langue in langues if langue]
 	type_textuel = oeuvre_filtree["tipo textual"].values[0]
 	matiere_1 = oeuvre_filtree["materia 1"].values[0]
 	matiere_2 = oeuvre_filtree["materia 2"].values[0]
@@ -167,12 +158,12 @@ def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=F
 
 	if beta_copid:
 		if disable_queries:
-			request = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+			request = None, None, None, None, None
 		else:
 			request = queries.search_factgrid_beta_id(identifier=beta_copid, type_identifier="copid")
 	elif beta_manid:
 		if disable_queries:
-			request = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+			request = None, None, None, None, None
 		else:
 			request = queries.search_factgrid_beta_id(identifier=beta_manid, type_identifier="manid")
 	else:
@@ -180,25 +171,29 @@ def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=F
 	if request:
 		libraries_id, factgrid_mss_id, institution_id, msName, ISTC = request
 	else:
-		libraries_id, factgrid_mss_id, institution_id, msName, ISTC = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+		libraries_id, factgrid_mss_id, institution_id, msName, ISTC = None, None, None, None, None
 
 	if not pd.isna(beta_cnum):
 		if disable_queries is True:
-			incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+			incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id, BNFid, BNEid, VIAFid, authorId, authorName = None, None, None, None, None, None, None, None, None
 		else:
-			factgrid_cnum, factgrid_work_id, unit_title, incipit_unit, explicit_unit, colophon, BNFid, BNEid, VIAFid = queries.retrieve_msContents(identifier=beta_cnum)
+			factgrid_cnum, factgrid_work_id, unit_title, incipit_unit, explicit_unit, colophon, BNFid, BNEid, VIAFid, authorId, authorName  = queries.retrieve_msContents(identifier=beta_cnum)
 	else:
-		incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id, colophon, BNFid, BNEid, VIAFid = "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown", "Unknown"
+		incipit_unit, explicit_unit, factgrid_cnum, factgrid_work_id, colophon, BNFid, BNEid, VIAFid, authorId, authorName = None, None, None, None, None, None, None, None, None, None
 
-
+	if authorName:
+		authorName_parse = retrieve_names(authorName, parser=name_parser, is_author=True)
+	else:
+		authorName_parse = auteur_parse
 
 	if lien_philobiblon != None and beta_cnum != None:
 		if disable_queries is True:
-			beta_texid, unit_title = "Unknown", "Unknown"
+			beta_texid, unit_title = None, None
 		else:
 			beta_texid, unit_title = queries.search_philobiblon(lien_philobiblon, cnum=beta_cnum)
+			print("Philobiblon search OK")
 	else:
-		beta_texid, unit_title = "Unknown", "Unknown"
+		beta_texid, unit_title = None, None
 
 	metadata_dict = {
 		"version_OSTA": version_OSTA,
@@ -234,6 +229,8 @@ def retrieve_metadata(as_list, filename, name_parser, work_id, disable_queries=F
 		"BNEid": BNEid,
 		"VIAFid": VIAFid,
 		"ISTC": ISTC,
+		"author_id_factgrid": authorId,
+		"author_name_factgrid": authorName_parse,
 		"factgrid_institution_id": institution_id,
 		"factgrid_cnum": factgrid_cnum,
 		"incipit_unit": incipit_unit,

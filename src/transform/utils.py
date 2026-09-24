@@ -3,6 +3,15 @@ import pandas as pd
 import lxml.etree as ET
 
 
+def remove_unnecesary_lb_nodes(xml_tree):
+	lb_nodes = xml_tree.xpath("""//lb[preceding-sibling::*[1][self::pb]][following-sibling::*[1][self::fw]] | //lb[preceding-sibling::*[1][self::fw]][following-sibling::*[1][self::cb]]| //lb[preceding-sibling::*[1][self::fw]][following-sibling::*[1][self::pb]]| //lb[following-sibling::*[1][self::fw]]
+| //lb[following-sibling::*[1][self::pb]]""")
+	for lb in lb_nodes:
+		print("Removing node.")
+		lb.getparent().remove(lb)
+
+	return xml_tree
+
 def read_to_lines(path: str) -> list:
 	"""
 	Lit un fichier et le place dans une liste

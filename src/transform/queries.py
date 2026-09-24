@@ -20,7 +20,7 @@ def retrieve_msContents(identifier):
         identifier = str(round(identifier))
 
     query = f"""
-SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?classe ?classeLabel
+SELECT ?cnum ?cnumLabel ?author ?authorName ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?classe ?classeLabel
        ?unit_incipit ?unit_explicit ?title ?work_id ?work_incipit ?work_explicit ?BNFid ?BNEid ?VIAFid WHERE {{
   ?cnum wdt:P476 "BETA cnum {identifier}" .
 
@@ -43,6 +43,8 @@ SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?class
       OPTIONAL {{ ?wstmt pq:P602 ?work_colophon . }}
     }}
     OPTIONAL {{ ?work wdt:P367 ?BNFid . }}
+    OPTIONAL {{ ?work wdt:P21 ?author . }}
+    OPTIONAL {{ ?author wdt:P34 ?authorName . }}
     OPTIONAL {{ ?work wdt:P378 ?VIAFid . }}
     OPTIONAL {{ ?work wdt:P652 ?BNEid . }}
     OPTIONAL {{ ?work wdt:P476 ?work_philo_id . }}
@@ -73,6 +75,14 @@ SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?class
         facgrid_work_id = data['results']['bindings'][0]['work_id']['value']
     except (KeyError, IndexError):
         facgrid_work_id = None
+    try:
+        authorId = data['results']['bindings'][0]['author']['value']
+    except (KeyError, IndexError):
+        authorId = None
+    try:
+        authorName = data['results']['bindings'][0]['authorName']['value']
+    except (KeyError, IndexError):
+        authorName = None
     try:
         BNFid = data['results']['bindings'][0]['BNFid']['value']
     except (KeyError, IndexError):
@@ -116,7 +126,7 @@ SELECT ?cnum ?cnumLabel ?segmentation ?segmentationLabel ?wseg ?wsegLabel ?class
     except (KeyError, IndexError):
         factgrid_cnum_id = None
 
-    return factgrid_cnum_id, facgrid_work_id, unit_title, unit_incipit, unit_explicit, colophon, BNFid, BNEid, VIAFid
+    return factgrid_cnum_id, facgrid_work_id, unit_title, unit_incipit, unit_explicit, colophon, BNFid, BNEid, VIAFid, authorId, authorName
 
 
 def search_factgrid_beta_id(identifier, type_identifier):

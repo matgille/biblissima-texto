@@ -6,6 +6,7 @@
     xmlns:math="http://www.w3.org/2005/xpath-functions/math"
     exclude-result-prefixes="xs math" version="3.0">
     <xsl:output method="xml"/>
+    <xsl:strip-space elements="*"/>
 
 
     <!--Permet de copie en appliquant le namespace local de la feuille (défault: tei)-->
@@ -24,7 +25,7 @@
 
     <xsl:template match="/">
         <!--On crée un doc principal pour vérifier les validités-->
-        <xsl:result-document href="{$dir}/main.xml" indent="true">
+        <xsl:result-document href="{$dir}/main.xml">
             <TEI xmlns="http://www.tei-c.org/ns/1.0" xml:lang="es">
                 <teiHeader>
                     <fileDesc>
@@ -65,7 +66,9 @@
                     select="concat($dir, '/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
                 />
             </xsl:variable>
-            <xsl:result-document href="{$outname}" indent="true">
+            <xsl:result-document href="{$outname}">
+                <xsl:apply-templates select="processing-instruction()"/>
+
                 <xsl:element name="TEI" xmlns="http://www.tei-c.org/ns/1.0">
                     <xsl:apply-templates select="/TEI/child::node()"/>
                 </xsl:element>
@@ -171,7 +174,7 @@
 
 
     <!--Cas des initiales qui contiennent une miniature-->
-    <xsl:template match="hi[@rend['initiale']][figure[@type = 'miniature']]">
+    <xsl:template match="hi[@rend = 'initiale'][figure[@type = 'miniature']]">
         <xsl:element name="hi">
             <xsl:attribute name="rend">
                 <xsl:text>initiale</xsl:text>
