@@ -6,7 +6,6 @@
     xmlns:math="http://www.w3.org/2005/xpath-functions/math"
     exclude-result-prefixes="xs math" version="3.0">
     <xsl:output method="xml"/>
-    <xsl:strip-space elements="*"/>
 
 
     <!--Permet de copie en appliquant le namespace local de la feuille (défault: tei)-->
@@ -66,7 +65,7 @@
                     select="concat($dir, '/TEI/', substring-before(tokenize(base-uri(), '/')[last()], '.'), '.xml')"
                 />
             </xsl:variable>
-            <xsl:result-document href="{$outname}">
+            <xsl:result-document href="{$outname}" indent="false">
                 <xsl:apply-templates select="processing-instruction()"/>
 
                 <xsl:element name="TEI" xmlns="http://www.tei-c.org/ns/1.0">

@@ -1,5 +1,6 @@
 import glob
 import json
+import sys
 
 import lxml.etree as ET
 
@@ -30,8 +31,44 @@ def unwrap(node):
 	parent.remove(node)
 
 
+def structure_book(xml_tree):
+	preexisting_structure = xml_tree.xpath("descendant::tei:div[@type='livre']", namespaces=namespaces)
+	if len(preexisting_structure) != 0:
+		first_rubric = preexisting_structure[0].xpath("following::tei:figure[tei:ab/tei:hi[@rend='rubrique']]", namespaces=namespaces)[0]
+
+
+	# Vérifier que le premier texte de la pied_mouch n'est pas ignoré.
+	following_siblings = first_rubric.xpath("following-sibling::*",
+												namespaces=namespaces)
+	localisation_dict = {first_rubric: []}
+
+	# for node in following_siblings:
+	current_node = first_rubric
+	for index, node in enumerate(following_siblings):
+		if node.xpath("self::tei:figure[descendant::tei:hi[@rend='rubrique']]", namespaces=namespaces):
+			localisation_dict[node] = []
+			current_node = node
+		else:
+			localisation_dict[current_node].append(node)
+	parent_element = first_rubric.xpath("parent::tei:div", namespaces=namespaces)[0]
+	print(parent_element)
+	for heading, following_nodes in localisation_dict.items():
+		div = ET.Element("div")
+		div.set("type", "livre")
+		parent_element.append(div)
+		heading.tag = ET.QName(heading).localname
+		head = ET.Element("head")
+		head.append(heading)
+		par = ET.Element("p")
+		par.extend(following_nodes)
+		div.append(head)
+		div.append(par)
+	return xml_tree
+
+
 def structure(path):
 	xml_tree = ET.parse(path)
+	xml_tree = structure_book(xml_tree)
 	body = xml_tree.xpath("descendant::tei:body", namespaces=namespaces)[0]
 	try:
 		first_rubric = body.xpath("descendant::tei:hi[@rend='rubrique']", namespaces=namespaces)[0]
@@ -130,7 +167,10 @@ def structure(path):
 		preceding_rubric.append(lb)
 		preceding_rubric.append(rubrique)
 		unwrap(rubrique)
+	serialize(path=path, xml_tree=xml_tree)
 
+
+def serialize(path, xml_tree):
 	basename = path.split("/")[-1]
 	out_path = f"/home/mgl/Bureau/Travail/projets/Biblissima-Text/data/Biblissima-Textes/structured/{basename}"
 	print(f"Writing to {out_path}")
@@ -141,7 +181,5 @@ def structure(path):
 
 
 if __name__ == '__main__':
-	path = "test_data/TEI/*.xml"
-	for file in glob.glob(path):
-		print(file)
-		structure(file)
+	path = sys.argv[1]
+	structure(path)

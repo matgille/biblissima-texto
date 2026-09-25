@@ -99,6 +99,12 @@ def treat_combining_characters(text_string):
 	text_string = text_string.replace("n[~]", "[ñ](n)")
 	return text_string
 
+def treat_allographs(text_string):
+	text_string = text_string.replace("ƽ", "<choice><orig>ƽ</orig><reg>z</reg></choice>")
+	text_string = text_string.replace("σ", "<choice><orig>σ</orig><reg>s</reg></choice>")
+	text_string = text_string.replace("ħ", "<choice><orig>ħ</orig><reg>h</reg></choice>")
+	return text_string
+
 def treat_calderon(text_string):
 	text_string = text_string.replace("¶", '<g ref="#calderon1"/>')
 	text_string = text_string.replace("%2", '<g ref="#calderon2"/>')
@@ -242,6 +248,7 @@ def convert(orig_text, id="", debug: bool=False):
 	text = convert_ampersands(text)
 	text = iterxml(text, id)
 	text = identify_shifted_word_before_pb(text)
+	text = treat_allographs(text)
 	text = revert_parenthesis(text)
 
 

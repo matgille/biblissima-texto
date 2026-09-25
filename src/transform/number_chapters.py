@@ -13,7 +13,12 @@ def add_n(file):
 	root = as_tree.getroot()
 	for idx, div in enumerate(root.xpath("//tei:div[@type='chapitre']", namespaces=namespaces)):
 		previous_divisions = len(div.xpath("preceding-sibling::tei:div[@type='chapitre']", namespaces=namespaces))
-		div.set("n", str(previous_divisions + 1))
+		first_division = root.xpath("//tei:div[@type='chapitre']", namespaces=namespaces)[0]
+		if first_division.attrib.get("n"):
+			previous_divisions = previous_divisions + int(first_division.attrib.get("n"))
+		else:
+			previous_divisions = previous_divisions + 1
+		div.set("n", str(previous_divisions))
 
 	as_tree.write(file.replace("structured", "numbered"), pretty_print=True, encoding="utf-8")
 

@@ -4,13 +4,15 @@ import lxml.etree as ET
 
 
 def remove_unnecesary_lb_nodes(xml_tree):
-	lb_nodes = xml_tree.xpath("""//lb[preceding-sibling::*[1][self::pb]][following-sibling::*[1][self::fw]] | //lb[preceding-sibling::*[1][self::fw]][following-sibling::*[1][self::cb]]| //lb[preceding-sibling::*[1][self::fw]][following-sibling::*[1][self::pb]]| //lb[following-sibling::*[1][self::fw]]
-| //lb[following-sibling::*[1][self::pb]]""")
+	query = "//lb[following-sibling::node()[1][self::CW or self::CB1 or self::CB2 or self::CB3 or self::CB4 or self::CB5 or self::CB6 or self::CB7 or self::CB8 or self::pb or self::HD or self::fw or (self::text() and normalize-space() = '')]]"
+	lb_nodes = xml_tree.xpath(query, namespaces={"tei": "http://www.tei-c.org/ns/1.0"})
 	for lb in lb_nodes:
 		print("Removing node.")
 		lb.getparent().remove(lb)
-
+	if len(xml_tree.xpath(query, namespaces={"tei": "http://www.tei-c.org/ns/1.0"})) != 0:
+		xml_tree = remove_unnecesary_lb_nodes(xml_tree)
 	return xml_tree
+
 
 def read_to_lines(path: str) -> list:
 	"""
@@ -36,31 +38,31 @@ def process_date(node, date_debut, date_fin):
 	if "ca." in date_debut or (date_fin and "ca." in date_fin and date_debut != date_fin):
 		node.set("cert", "medium")
 		node.text = f"{date_debut} - {date_fin}"
-		node.set("atLeast", date_debut.replace("ca.", "").strip())
-		node.set("atMost", date_fin.replace("ca.", "").strip())
+		node.set("notBefore-iso", date_debut.replace("ca.", "").strip())
+		node.set("notAfter-iso", date_fin.replace("ca.", "").strip())
 	# Il manque le cas où les date sont égale avec ca.
 	elif date_debut == date_fin and "a quo" and "ad quem" not in date_debut:
 		node.text = date_debut
 		node.set("when", date_debut)
 	elif "a quo" in date_debut:
-		node.set("atLeast", date_debut.replace("a quo", "").strip())
+		node.set("notBefore-iso", date_debut.replace("a quo", "").strip())
 		node.text = date_debut
 		if "ad quem" in date_fin:
-			node.set("atMost", date_fin.replace("ad quem", "").strip())
+			node.set("notAfter-iso", date_fin.replace("ad quem", "").strip())
 			node.text = node.text + f"- {date_fin}"
 	elif date_fin and "ad quem"  in date_fin:
-		node.set("atMost", date_fin.replace("ad quem", "").strip())
+		node.set("notAfter-iso", date_fin.replace("ad quem", "").strip())
 		node.text = date_fin
 		if "a quo" in date_debut:
-			node.set("atLeast", date_fin.replace("ad quem", "").strip())
+			node.set("notBefore-iso", date_fin.replace("ad quem", "").strip())
 			node.text = f"{date_debut} -" + node.text
 	else:
 		node.text = ""
 		if date_debut:
-			node.set("atLeast", date_debut)
+			node.set("notBefore-iso", date_debut)
 			node.text = f"{date_debut}"
 		if date_fin:
-			node.set("atMost", date_fin)
+			node.set("notAfter-iso", date_fin)
 			node.text = f"{node.text} - {date_fin}"
 	return node
 
